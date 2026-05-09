@@ -12,25 +12,28 @@ import (
 type consoleOutputMsg string
 
 type Console struct {
-	Output     []string
-	Input      []rune
-	Cursor     int
-	Dir        string
-	History    []string
-	HistoryPos int
-	Scroll     int
-	Active     bool
-	Width      int
-	Height     int
-	outputCh   chan string
+	Output       []string
+	Input        []rune
+	Cursor       int
+	Dir          string
+	History      []string
+	HistoryPos   int
+	Scroll       int
+	Active       bool
+	Width        int
+	Height       int
+	outputCh     chan string
+	outputBytes  int
+	maxOutputBytes int
 }
 
 func NewConsole(width, height int) *Console {
 	dir, _ := os.Getwd()
 	return &Console{
-		Width:  width,
-		Height: height,
-		Dir:    dir,
+		Width:         width,
+		Height:        height,
+		Dir:           dir,
+		maxOutputBytes: 10240,
 	}
 }
 
@@ -113,7 +116,17 @@ func (c *Console) Exec(cmdLine string) {
 
 func (c *Console) AddOutput(line string) {
 	c.Output = append(c.Output, line)
+	c.outputBytes += len(line) + 1
 	c.Scroll = len(c.Output)
+
+	for c.outputBytes > c.maxOutputBytes && len(c.Output) > 1 {
+		c.outputBytes -= len(c.Output[0]) + 1
+		c.Output = c.Output[1:]
+		c.Scroll--
+		if c.Scroll < 0 {
+			c.Scroll = 0
+		}
+	}
 }
 
 func (c *Console) RenderHeader() string {
