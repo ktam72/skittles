@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,9 @@ import (
 	"github.com/ktam/skittles/actions"
 	"github.com/ktam/skittles/fs"
 
+	"github.com/alecthomas/chroma/v2/lexers"
+	"github.com/alecthomas/chroma/v2/quick"
+	"github.com/charmbracelet/glamour"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -175,7 +179,33 @@ func (m *Model) loadViewerBuffer() {
 		m.viewerBuf = []string{fmt.Sprintf("Error: %v", err)}
 		return
 	}
-	m.viewerBuf = strings.Split(string(data), "\n")
+
+	text := string(data)
+	ext := strings.ToLower(filepath.Ext(m.viewer))
+
+	if ext == ".md" {
+		rendered, err := glamour.Render(text, "dark")
+		if err == nil {
+			m.viewerBuf = strings.Split(rendered, "\n")
+			m.viewerOff = 0
+			return
+		}
+	}
+
+	var buf bytes.Buffer
+	lang := ""
+	lexer := lexers.Match(filepath.Base(m.viewer))
+	if lexer != nil {
+		lang = lexer.Config().Name
+	}
+	err = quick.Highlight(&buf, text, lang, "terminal", "dracula")
+	if err == nil && buf.Len() > 0 {
+		m.viewerBuf = strings.Split(buf.String(), "\n")
+		m.viewerOff = 0
+		return
+	}
+
+	m.viewerBuf = strings.Split(text, "\n")
 	m.viewerOff = 0
 }
 

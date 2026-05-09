@@ -205,6 +205,7 @@ var extActions = map[string]Action{
 	".toml": {Look: true},
 	".conf": {Look: true},
 	".log":  {Look: true},
+	".mdx":  {Command: "open -a MP4M.app $P"},
 	".lzh":  {Command: "lha x $P"},
 	".zip":  {Command: "unzip -o $P"},
 	".tar":  {Command: "tar xf $P"},

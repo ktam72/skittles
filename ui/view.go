@@ -173,8 +173,8 @@ func (m *Model) renderViewer() string {
 	}
 	for i := m.viewerOff; i < end; i++ {
 		line := m.viewerBuf[i]
-		if len(line) > m.Width-4 {
-			line = line[:m.Width-7] + "..."
+		if lipgloss.Width(line) > m.Width-4 {
+			line = lipgloss.NewStyle().Width(m.Width - 7).Render(line) + "..."
 		}
 		visible = append(visible, line)
 	}
