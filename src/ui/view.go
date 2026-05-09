@@ -604,6 +604,9 @@ func (m *Model) renderViewer() string {
 	}
 	for i := m.viewerOff; i < end; i++ {
 		line := m.viewerBuf[i]
+		if m.viewerShowLineNum {
+			line = fmt.Sprintf("%4d %s", i+1, line)
+		}
 		if lipgloss.Width(line) > m.Width-4 {
 			line = lipgloss.NewStyle().Width(m.Width - 7).Render(line) + "..."
 		}

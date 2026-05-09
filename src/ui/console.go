@@ -48,6 +48,11 @@ func (c *Console) Exec(cmdLine string) {
 		return
 	}
 
+	if parts[0] == "sudo" {
+		c.AddOutput("sudo: 権限昇格は禁止されています")
+		return
+	}
+
 	// handle clear builtin
 	if parts[0] == "clear" {
 		c.Output = nil

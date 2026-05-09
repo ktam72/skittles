@@ -38,7 +38,7 @@ func extractArchiveCmd(src string) tea.Cmd {
 	}
 }
 
-const version = "2.0.0"
+const version = "2.1.0"
 
 type Mode int
 
@@ -86,6 +86,7 @@ type Model struct {
 	chmodInput        []rune
 	chmodPath         string
 	viewerTitle       string
+	viewerShowLineNum bool
 
 	searchActive  bool
 	searchQuery   []rune
@@ -520,6 +521,7 @@ func (m *Model) handleViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.viewerBuf = nil
 		m.viewerOff = 0
 		m.viewerTitle = ""
+		m.viewerShowLineNum = false
 		m.searchResults = nil
 		m.searchQuery = nil
 		m.searchActive = false
@@ -632,12 +634,14 @@ func (m *Model) loadViewerBuffer() {
 
 	if ext == ".md" {
 		m.viewerBuf = strings.Split(renderMarkdown(text), "\n")
+		m.viewerShowLineNum = false
 		m.viewerOff = 0
 		return
 	}
 
 	if isBinaryData(data) {
 		m.viewerBuf = renderHexView(data)
+		m.viewerShowLineNum = false
 		m.viewerOff = 0
 		return
 	}
@@ -651,11 +655,14 @@ func (m *Model) loadViewerBuffer() {
 	err = quick.Highlight(&buf, text, lang, "terminal", "dracula")
 	if err == nil && buf.Len() > 0 {
 		m.viewerBuf = strings.Split(buf.String(), "\n")
+		m.viewerShowLineNum = true
 		m.viewerOff = 0
 		return
 	}
 
-	m.viewerBuf = strings.Split(text, "\n")
+	raw := strings.Split(text, "\n")
+	m.viewerBuf = raw
+	m.viewerShowLineNum = true
 	m.viewerOff = 0
 }
 
