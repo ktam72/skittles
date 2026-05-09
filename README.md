@@ -1,7 +1,7 @@
 # Skittles
 
 X68000 用ファイラー [mint.x](https://opencode.ai) の設計思想を継承した、
-モダンな 2画面 TUI ファイルマネージャ。
+モダンな 2画面 TUI ファイルマネージャ。Pure Go、CGo不要。
 
 ![Skittles Screenshot](screens/screen1.png)
 ![Skittles Screenshot](screens/screen2.png)
@@ -16,8 +16,8 @@ X68000 用ファイラー [mint.x](https://opencode.ai) の設計思想を継承
 - **文字コード自動判別**: UTF-8 / Shift-JIS / EUC-JP を自動検出して表示
 - **アーカイブ内部ブラウズ**: ZIP/TAR/7z/GZ/BZ2 を **pure Goで内部展開**、ディレクトリのように閲覧・操作
 - **拡張子→アクション**: `.go` → ビューア、`.zip` → ブラウズ、`.mdx` → MP4M.app 等
-- **コンソールペイン**: **cd対応・`$`プロンプト表示**、コマンドの**リアルタイム出力**、履歴
-- **クロスプラットフォーム**: macOS / Linux / Windows（pure Go、CGo不要）
+- **コンソールペイン**: **cd対応・`$`プロンプト表示**、コマンドの**リアルタイム出力**、履歴、スクロールバー
+- **Pure Go**: CGo不要。Goの動作する環境であればどのプラットフォームでも動作するはず（macOSで開発・動作確認、Linux/Windowsは未確認）
 - **日本語入力対応**: macOS 起動時・コンソールフォーカス時に自動で英数入力に切替
 - **トップバー**: アプリ名・バージョン・クレジット・リアルタイム時計（曜日付き）表示
 - **外部プレビュー**: `p` キーで外部アプリ（プレビュー.app等）で開く
