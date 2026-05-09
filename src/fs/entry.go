@@ -40,6 +40,19 @@ func ReadDir(dir string) (*Listing, error) {
 		return nil, err
 	}
 	l := &Listing{SortBy: SortName}
+
+	parent := filepath.Dir(strings.TrimRight(dir, "/"))
+	if dir != "/" {
+		l.Entries = append(l.Entries, Entry{
+			Name:   "..",
+			Path:   parent,
+			Size:   0,
+			Mode:   os.ModeDir | 0755,
+			IsDir:  true,
+			IsLink: false,
+		})
+	}
+
 	for _, e := range entries {
 		fi, err := e.Info()
 		if err != nil {

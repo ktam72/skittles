@@ -52,7 +52,7 @@ func (p *Pane) Reload() {
 	if !p.ShowDot {
 		filtered := make([]fs.Entry, 0, len(l.Entries))
 		for _, e := range l.Entries {
-			if !strings.HasPrefix(e.Name, ".") {
+			if e.Name == ".." || !strings.HasPrefix(e.Name, ".") {
 				filtered = append(filtered, e)
 			}
 		}

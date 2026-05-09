@@ -1,5 +1,6 @@
 skittles
 /skittles
+/src/skittles
 *.test
 .DS_Store
 dist/

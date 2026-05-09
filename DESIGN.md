@@ -19,30 +19,27 @@ Skittles は X68000 用ファイラー mint.x (Madoka INTerpreter) の設計思�
 ### レイヤー構造
 
 ```
-main.go                  ← エントリポイント、tea.NewProgram
-  ├─ input_darwin.go     ← macOS: 起動時に英数入力切替（ビルドタグ分離）
-  └─ input_other.go      ← Linux/Windows: 何もしない（no-op）
-
-ui/
-  ├─ model.go            ← Elm Model/Update（全状態管理・イベントディスパッチ）
-  ├─ pane.go             ← ファイルペイン（カーソル/マーク/ソート/表示、パーミッション表示）
-  ├─ console.go          ← コンソールペイン（出力バッファ/コマンド履歴/入力、リアルタイム出力）
-  ├─ mdrender.go         ← Markdown レンダリング（glamour + プレーンテキストフォールバック）
-  └─ view.go             ← lipgloss レンダリング、3ペインレイアウト、トップバー
-
-fs/
-  ├─ entry.go            ← ファイルエントリ、ディレクトリ一覧、ソート
-  ├─ ops.go              ← Copy/Move/Delete/Touch
-  ├─ archive_common.go   ← アーカイブ展開（Go標準/TAR/ZIP + 外部コマンド）
-  ├─ archive_nocgo.go    ← ExtractToTemp（非CGo時）
-  ├─ archive_cgo.go      ← ExtractToTemp（CGo時: Homebrew libarchive + 7zフォールバック）
-  └─ hexview.go          ← バイナリファイルのHEX表示
-
-actions/
-  └─ registry.go         ← マジックバイト/拡張子/ファイル名によるアクション解決
-
-config.yaml              ← 拡張子→アクション定義（ユーザー編集可能）
-DESIGN.md                ← 設計ドキュメント（本ファイル）
+src/
+├── main.go                  ← エントリポイント、tea.NewProgram
+│   ├─ input_darwin.go     ← macOS: 起動時に英数入力切替（ビルドタグ分離）
+│   └─ input_other.go      ← Linux/Windows: 何もしない（no-op）
+├── ui/
+│   ├─ model.go            ← Elm Model/Update（全状態管理・イベントディスパッチ）
+│   ├─ pane.go             ← ファイルペイン（カーソル/マーク/ソート/表示、パーミッション表示）
+│   ├─ console.go          ← コンソールペイン（出力バッファ/コマンド履歴/入力、リアルタイム出力）
+│   ├─ mdrender.go         ← Markdown レンダリング（glamour + プレーンテキストフォールバック）
+│   └─ view.go             ← lipgloss レンダリング、3ペインレイアウト、トップバー
+├── fs/
+│   ├─ entry.go            ← ファイルエントリ、ディレクトリ一覧、ソート
+│   ├─ ops.go              ← Copy/Move/Delete/Touch
+│   ├─ archive_common.go   ← アーカイブ展開（Go標準/TAR/ZIP + 外部コマンド）
+│   ├─ archive_nocgo.go    ← ExtractToTemp（非CGo時）
+│   ├─ archive_cgo.go      ← ExtractToTemp（CGo時: Homebrew libarchive + 7zフォールバック）
+│   └─ hexview.go          ← バイナリファイルのHEX表示
+├── actions/
+│   └─ registry.go         ← マジックバイト/拡張子/ファイル名によるアクション解決
+├── go.mod / go.sum         ← Goモジュール定義
+└── skittles                ← ビルド成果物（gitignore）
 ```
 
 ### データフロー
@@ -327,9 +324,8 @@ sr キーで循環: 名前 → 日時 → 拡張子 → サイズ → (戻る)
 ### ローカルビルド
 
 ```bash
-go build -o skittles .                  # ビルド
-go vet ./...                             # 静的解析
-golangci-lint run ./...                  # Lint（0 issues 維持）
+cd src
+go build -o skittles .
 ```
 
 ### 品質管理

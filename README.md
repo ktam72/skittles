@@ -48,7 +48,7 @@ go install github.com/ktam72/skittles@latest
 
 ```bash
 git clone git@github.com:ktam72/skittles.git
-cd skittles
+cd skittles/src
 
 # 依存パッケージ（CGoビルドに必要）
 brew install libarchive p7zip
