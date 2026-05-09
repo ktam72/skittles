@@ -36,8 +36,8 @@ src/
 ├── fs/
 │   ├─ entry.go            ← ファイルエントリ、ディレクトリ一覧、ソート、所有者/グループ
 │   ├─ ops.go              ← Copy/Move/Delete/Touch
-│   ├─ archive_common.go   ← アーカイブ展開（ZIP/TAR/GZ/BZ2→Go標準、7z→sevenzip）
-│   ├─ archive_nocgo.go    ← ExtractToTemp エントリ（LZH/RAR→外部コマンド）
+│   ├─ archive_common.go   ← アーカイブ展開（ZIP/TAR/GZ/BZ2→Go標準、7z→sevenzip、全てpure Go）
+│   ├─ archive_nocgo.go    ← ExtractToTemp エントリ
 │   ├─ encode.go           ← 文字コード自動判別（UTF-8/Shift-JIS/EUC-JP）
 │   └─ hexview.go          ← バイナリファイルのHEX表示
 ├── actions/
@@ -181,9 +181,12 @@ Markdown は `ui/mdrender.go` でレンダリング。最初に `glamour.Render`
 | ファイル | 内容 |
 |---------|------|
 | `archive_common.go` | ZIP/TAR/GZ/BZ2 → Go標準ライブラリ、7z → sevenzip（pure Go） |
-| `archive_nocgo.go` | ExtractToTemp エントリ、LZH/RAR → 外部コマンドフォールバック |
+| `archive_nocgo.go` | ExtractToTemp エントリ |
 
-全プラットフォーム共通。CGo不要。`go build` 一発でビルド可能。
+全プラットフォーム共通。CGo不要。外部コマンド依存ゼロ。
+対応形式: ZIP / TAR / TGZ / GZ / BZ2 / TBZ2 / 7z
+
+async `tea.Cmd` + goroutine で展開し、抽出前に `Extracting ...`、完了後に `done: N entries` をコンソールに表示。
 
 ### 9. 起動時入力ソース制御
 
@@ -426,17 +429,18 @@ mint.x の独自価値は「2画面による暗黙コンテキスト」にあり
 ## 開発ロードマップ
 
 ```
-Phase 1  ─ 基本2画面 + ファイル操作           ✅ 完了
-Phase 2  ─ コンソールペイン + マーク           ✅ 完了
-Phase 3  ─ ビューア（Markdown/HL/スクロール）   ✅ 完了
-Phase 4  ─ リアルタイム出力・パーミッション表示 ✅ 完了
-Phase 5  ─ リファクタリング・Lint 0 issues    ✅ 完了
-Phase 6  ─ アーカイブ内部ブラウズ              ✅ 完了
-Phase 7  ─ HEXビューア・バイナリ判別          ✅ 完了
-Phase 8  ─ リネームモード・削除確認           ✅ 完了
-Phase 9  ─ 文字コード自動判別                 ✅ 完了
-Phase10  ─ クロスプラットフォーム（pure Go）   ✅ 完了
-Phase11  ─ インクリメンタルサーチ              ⬜ 未着手
-Phase12  ─ Homebrew Formula / 配布             ⬜ 未着手
-Phase13  ─ プラグインシステム                  ⬜ 未着手
+Phase 1  ─ 基本2画面 + ファイル操作              ✅ 完了
+Phase 2  ─ コンソールペイン + マーク              ✅ 完了
+Phase 3  ─ ビューア（Markdown/HL/スクロール）      ✅ 完了
+Phase 4  ─ リアルタイム出力・パーミッション表示    ✅ 完了
+Phase 5  ─ リファクタリング・Lint 0 issues       ✅ 完了
+Phase 6  ─ アーカイブ内部ブラウズ                 ✅ 完了
+Phase 7  ─ HEXビューア・バイナリ判別             ✅ 完了
+Phase 8  ─ リネームモード・削除確認              ✅ 完了
+Phase 9  ─ 文字コード自動判別                    ✅ 完了
+Phase10  ─ クロスプラットフォーム（pure Go）      ✅ 完了
+Phase11  ─ メモリ管理・バッファ制限              ✅ 完了
+Phase12  ─ インクリメンタルサーチ                ⬜ 未着手
+Phase13  ─ Homebrew Formula / 配布               ⬜ 未着手
+Phase14  ─ プラグインシステム                    ⬜ 未着手
 ```
