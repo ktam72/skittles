@@ -17,6 +17,19 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+type archiveExtractedMsg struct {
+	tmp  string
+	err  error
+	path string
+}
+
+func extractArchiveCmd(src string) tea.Cmd {
+	return func() tea.Msg {
+		tmp, err := fs.ExtractToTemp(src)
+		return archiveExtractedMsg{tmp: tmp, err: err, path: src}
+	}
+}
+
 const version = "0.8.0"
 
 type Mode int
@@ -140,6 +153,25 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case consoleOutputMsg:
 		m.Console.AddOutput(string(msg))
 		return m, consoleOutputCmd(m.Console.outputCh)
+
+	case archiveExtractedMsg:
+		p := m.FocusedPane()
+		if p == nil {
+			return m, nil
+		}
+		if msg.err != nil {
+			m.err = msg.err
+			m.Console.AddOutput(fmt.Sprintf("error: %v", msg.err))
+		} else {
+			entries, _ := os.ReadDir(msg.tmp)
+			m.Console.AddOutput(fmt.Sprintf("done: %d entries", len(entries)))
+			p.SavedCursor = p.Cursor
+			p.ArchivePath = msg.path
+			p.RealDir = p.Dir
+			p.IsArchive = true
+			p.ArchiveRoot = msg.tmp
+			_ = p.Chdir(msg.tmp)
+		}
 
 	case tea.KeyMsg:
 		switch m.mode {
@@ -422,20 +454,10 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			act := m.reg.Resolve(cur.Path)
 			if act.Browse {
 				m.Console.AddOutput(fmt.Sprintf("Extracting %s ...", cur.Name))
-				tmp, err := fs.ExtractToTemp(cur.Path)
-				if err != nil {
-					m.err = err
-					m.Console.AddOutput(fmt.Sprintf("error: %v", err))
-				} else {
-					entries, _ := os.ReadDir(tmp)
-					m.Console.AddOutput(fmt.Sprintf("done: %d entries extracted", len(entries)))
-					p.SavedCursor = p.Cursor
-					p.ArchivePath = cur.Path
-					p.RealDir = p.Dir
-					p.IsArchive = true
-					p.ArchiveRoot = tmp
-					_ = p.Chdir(tmp)
-				}
+				p.SavedCursor = p.Cursor
+				p.ArchivePath = cur.Path
+				p.RealDir = p.Dir
+				return m, extractArchiveCmd(cur.Path)
 			} else if act.Look {
 				m.viewer = cur.Path
 				m.loadViewerBuffer()
