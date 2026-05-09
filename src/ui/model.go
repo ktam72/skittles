@@ -416,6 +416,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				p.ArchivePath = ""
 				p.ArchiveRoot = ""
 				_ = p.Chdir(p.RealDir)
+				p.Cursor = p.SavedCursor
 				p.RealDir = ""
 			} else {
 				abs, _ := filepath.Abs(cur.Path)
@@ -432,6 +433,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				} else {
 					entries, _ := os.ReadDir(tmp)
 					m.Console.AddOutput(fmt.Sprintf("done: %d entries extracted", len(entries)))
+					p.SavedCursor = p.Cursor
 					p.ArchivePath = cur.Path
 					p.RealDir = p.Dir
 					p.IsArchive = true
@@ -473,6 +475,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				p.ArchivePath = ""
 				p.ArchiveRoot = ""
 				_ = p.Chdir(p.RealDir)
+				p.Cursor = p.SavedCursor
 				p.RealDir = ""
 			} else if p.IsArchive {
 				parent := filepath.Dir(strings.TrimRight(p.Dir, "/"))
@@ -497,6 +500,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				p.ArchivePath = ""
 				p.ArchiveRoot = ""
 				_ = p.Chdir(p.RealDir)
+				p.Cursor = p.SavedCursor
 				p.RealDir = ""
 			} else if p.IsArchive {
 				parent := filepath.Dir(strings.TrimRight(p.Dir, "/"))

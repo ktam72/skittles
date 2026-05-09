@@ -32,6 +32,7 @@ type Pane struct {
 	ArchivePath string
 	ArchiveRoot string
 	RealDir     string
+	SavedCursor int
 }
 
 func NewPane(dir string, width, height int) *Pane {
