@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -38,7 +39,7 @@ func extractArchiveCmd(src string) tea.Cmd {
 	}
 }
 
-const version = "2.3.1"
+const version = "2.4.0"
 
 type Mode int
 
@@ -1095,23 +1096,43 @@ func (m *Model) runAction(act actions.Action, path string) string {
 	if editor == "" {
 		editor = "vim"
 	}
-	cmdStr := act.Command
-	cmdStr = strings.ReplaceAll(cmdStr, "$P", path)
-	cmdStr = strings.ReplaceAll(cmdStr, "$F", filepath.Base(path))
-	cmdStr = strings.ReplaceAll(cmdStr, "$D", filepath.Dir(path))
-	cmdStr = strings.ReplaceAll(cmdStr, "$EDITOR", editor)
 
-	parts := strings.Fields(cmdStr)
-	if len(parts) == 0 {
+	tplParts := strings.Fields(act.Command)
+	if len(tplParts) == 0 {
 		return ""
 	}
 
-	cmd := exec.Command(parts[0], parts[1:]...)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Sprintf("error: %v\n%s", err, string(out))
+	reApp := regexp.MustCompile(`\$APP\(([^)]+)\)`)
+	resolved := make([]string, len(tplParts))
+	for i, part := range tplParts {
+		part = strings.ReplaceAll(part, "$P", path)
+		part = strings.ReplaceAll(part, "$F", filepath.Base(path))
+		part = strings.ReplaceAll(part, "$D", filepath.Dir(path))
+		part = strings.ReplaceAll(part, "$EDITOR", editor)
+		part = reApp.ReplaceAllStringFunc(part, func(match string) string {
+			appName := reApp.FindStringSubmatch(match)[1]
+			execPath, err := actions.ResolveAppExecutable(appName)
+			if err != nil {
+				return match
+			}
+			return execPath
+		})
+		resolved[i] = part
 	}
-	return string(out)
+
+	fmt.Fprintf(os.Stderr, "\n[runAction] bin=%q args=%q\n", resolved[0], resolved[1:])
+
+	cmd := exec.Command(resolved[0], resolved[1:]...)
+	_ = cmd.Start()
+	_ = cmd.Process.Release()
+
+	lines := []string{
+		fmt.Sprintf("cmd: %s", resolved[0]),
+	}
+	for i, arg := range resolved[1:] {
+		lines = append(lines, fmt.Sprintf("  arg[%d]: %s", i, arg))
+	}
+	return strings.Join(lines, "\n") + "\n"
 }
 
 func isExecutable(e *fs.Entry) bool {

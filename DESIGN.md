@@ -81,11 +81,11 @@ Tab キーで Left → Right → Console → Left と巡回。アクティブペ
 
 ### 2. トップバー
 
-画面上端に常時表示。アプリ名 `Skittles v2.3.0`（左）と現在日時（右）を太字・紺背景で表示。
+画面上端に常時表示。アプリ名 `Skittles v2.4.0`（左）と現在日時（右）を太字・紺背景で表示。
 時計は `tea.Tick(time.Second)` による定期購読で1秒ごとに更新。
 
 ```
-Skittles v2.3.0                                2026/05/09 12:34:56
+Skittles v2.4.0                                2026/05/09 12:34:56
 ```
 
 ### 3. 暗黙の source/destination コンテキスト
@@ -113,7 +113,7 @@ Skittles v2.3.0                                2026/05/09 12:34:56
 - `{Command: "..."}` → 外部コマンド実行 (`$P`, `$F`, `$D`, `$EDITOR` が展開される)
 - 未登録 → 実行ビットあり → `$EDITOR $P` / 実行ビットなし → **ビルトインビューア**
 
-`.mdx` は `open -a MP4M.app $P` にマッピング。画像（`.png`等）は `open $P` でプレビュー.app連携。
+`.mdx` は `/Applications/MP4M.app/Contents/MacOS/MP4M $P` にマッピング（直接実行）。`$APP(name)` プレースホルダでアプリバンドル内の実行ファイルを自動解決可能。画像（`.png`等）は `open $P` でプレビュー.app連携。
 
 ### 5. コンソールペイン
 
@@ -417,7 +417,7 @@ GOOS=linux GOARCH=amd64 go build -o skittles-linux .
 ### インストール
 
 ```bash
-go install github.com/ktam72/skittles@v2.3.1
+go install github.com/ktam72/skittles@v2.4.0
 # または
 git clone ... && cd skittles && go build -o skittles . && ./skittles
 ```

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 type Action struct {
@@ -107,6 +108,36 @@ func (r *Registry) ResolveName(name string) Action {
 	return Action{}
 }
 
+func ResolveAppExecutable(name string) (string, error) {
+	name = strings.TrimSuffix(name, ".app")
+
+	candidates := []string{
+		fmt.Sprintf("/Applications/%s.app/Contents/MacOS/%s", name, name),
+		fmt.Sprintf("/Applications/%s/%s.app/Contents/MacOS/%s", name, name, name),
+		filepath.Join(os.Getenv("HOME"), "Applications", fmt.Sprintf("%s.app/Contents/MacOS/%s", name, name)),
+	}
+	for _, c := range candidates {
+		if fi, err := os.Stat(c); err == nil && !fi.IsDir() {
+			return c, nil
+		}
+	}
+
+	out, err := exec.Command("mdfind", fmt.Sprintf("kMDItemFSName == '%s.app'", name)).Output()
+	if err == nil {
+		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+		for _, line := range lines {
+			execPath := filepath.Join(line, "Contents", "MacOS", name)
+			if fi, err := os.Stat(execPath); err == nil && !fi.IsDir() {
+				return execPath, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("app %s not found", name)
+}
+
+var appCache sync.Map
+
 func Execute(act Action, filePath string) error {
 	if act.Look {
 		fmt.Fprintf(os.Stderr, "\n[viewer] %s (not implemented yet)\n", filePath)
@@ -119,6 +150,22 @@ func Execute(act Action, filePath string) error {
 	cmdStr = strings.ReplaceAll(cmdStr, "$F", filepath.Base(filePath))
 	cmdStr = strings.ReplaceAll(cmdStr, "$P", filePath)
 	cmdStr = strings.ReplaceAll(cmdStr, "$D", filepath.Dir(filePath))
+
+	reApp := regexp.MustCompile(`\$APP\(([^)]+)\)`)
+	cmdStr = reApp.ReplaceAllStringFunc(cmdStr, func(match string) string {
+		appName := reApp.FindStringSubmatch(match)[1]
+		if cached, ok := appCache.Load(appName); ok {
+			return cached.(string)
+		}
+		path, err := ResolveAppExecutable(appName)
+		if err != nil {
+			return match
+		}
+		appCache.Store(appName, path)
+		return path
+	})
+
+	fmt.Fprintf(os.Stderr, "\n[exec] %s\n", cmdStr)
 
 	parts := strings.Fields(cmdStr)
 	if len(parts) == 0 {
@@ -211,7 +258,7 @@ var extActions = map[string]Action{
 	".gif":  {Command: "open $P"},
 	".bmp":  {Command: "open $P"},
 	".webp": {Command: "open $P"},
-	".mdx":  {Command: "open -a MP4M.app $P"},
+	".mdx":  {Command: "/Applications/MP4M.app/Contents/MacOS/MP4M $P"},
 	".zip":  {Browse: true},
 	".tar":  {Browse: true},
 	".tgz":  {Browse: true},

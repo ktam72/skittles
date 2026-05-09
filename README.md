@@ -36,7 +36,7 @@ golangci-lintで検出した問題を潰してあります。
 ### Go
 
 ```bash
-go install github.com/ktam72/skittles@v2.3.1
+go install github.com/ktam72/skittles@v2.4.0
 ```
 
 ### 手動ビルド
@@ -198,7 +198,7 @@ actions:
 
   # 外部コマンドを実行（$P はファイルパスに展開）
   - match: ".mdx"
-    command: "open -a MP4M.app $P"
+    command: "/Applications/MP4M.app/Contents/MacOS/MP4M $P"
 ```
 
 #### match の形式
