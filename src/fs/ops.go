@@ -86,18 +86,20 @@ func CopyEntries(srcDir string, entries []Entry, dstDir string) (int, error) {
 func MoveEntries(srcDir string, entries []Entry, dstDir string) (int, error) {
 	count := 0
 	for _, e := range entries {
+		src := e.Path
+		dst := filepath.Join(dstDir, e.Name)
 		if e.IsDir {
-			if err := os.MkdirAll(filepath.Join(dstDir, e.Name), 0755); err != nil {
+			if err := CopyDir(src, dst); err != nil {
 				return count, err
 			}
-			count++
-			continue
-		}
-		if err := Move(e.Path, filepath.Join(dstDir, e.Name)); err != nil {
-			if err := CopyFile(e.Path, filepath.Join(dstDir, e.Name)); err != nil {
-				return count, err
+			_ = os.RemoveAll(src)
+		} else {
+			if err := Move(src, dst); err != nil {
+				if err := CopyFile(src, dst); err != nil {
+					return count, err
+				}
+				_ = os.Remove(src)
 			}
-			_ = os.Remove(e.Path)
 		}
 		count++
 	}
