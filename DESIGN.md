@@ -205,7 +205,6 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 | Home / g | 先頭へ |
 | End / G | 末尾へ |
 | Enter | ディレクトリ進入 / アクション実行 |
-| Option+Enter | 外部アプリでプレビュー（pキーと同動作） |
 | ← / h / Backspace | 親ディレクトリへ / アーカイブを抜ける |
 | Tab | フォーカス切替（Left→Right→Console→Left） |
 | Space | カーソル行をマーク/マーク解除して次の行へ |

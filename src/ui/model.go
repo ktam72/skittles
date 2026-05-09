@@ -405,11 +405,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if cur == nil {
 			return m, nil
 		}
-		if msg.Alt {
-			if !cur.IsDir {
-				_ = openFile(cur.Path)
-			}
-		} else if cur.IsDir {
+		if cur.IsDir {
 			if p.IsArchive && cur.Name == ".." && p.Dir == p.ArchiveRoot {
 				_ = os.RemoveAll(p.Dir)
 				p.IsArchive = false
@@ -567,11 +563,6 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "a":
 		p.MarkAll()
 	case "p":
-		cur := p.Current()
-		if cur != nil && !cur.IsDir {
-			_ = openFile(cur.Path)
-		}
-	case "π":
 		cur := p.Current()
 		if cur != nil && !cur.IsDir {
 			_ = openFile(cur.Path)
