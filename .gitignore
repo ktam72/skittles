@@ -3,3 +3,4 @@ skittles
 *.test
 .DS_Store
 dist/
+*.swp
