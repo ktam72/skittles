@@ -117,7 +117,7 @@ GOOS=windows GOARCH=amd64 go build -o skittles.exe .
 
 ## ライセンス
 
-MIT License
+Apache License 2.0
 
 ## クレジット
 
