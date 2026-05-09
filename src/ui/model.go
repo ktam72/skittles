@@ -60,6 +60,7 @@ type Model struct {
 	now       time.Time
 	mode      Mode
 	reg       *actions.Registry
+	editor    string
 	viewer    string
 	viewerBuf []string
 	viewerOff int
@@ -82,7 +83,7 @@ const (
 
 const consoleHeight = 10
 
-func NewModel(leftDir, rightDir string) *Model {
+func NewModel(leftDir, rightDir string, editor string) *Model {
 	w, h := 120, 40
 	paneW := w/2 - 2
 	paneH := h - consoleHeight - 9
@@ -104,6 +105,7 @@ func NewModel(leftDir, rightDir string) *Model {
 		now:     time.Now(),
 		mode:    ModeBrowse,
 		reg:     actions.DefaultRegistry(),
+		editor:  editor,
 	}
 	m.Left.Active = true
 	return m
@@ -306,11 +308,7 @@ func (m *Model) handleViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case tea.KeyRunes:
 		if string(msg.Runes) == "e" || string(msg.Runes) == "E" {
-			editor := os.Getenv("EDITOR")
-			if editor == "" {
-				editor = "vim"
-			}
-			cmd := &editCmd{Cmd: exec.Command(editor, m.viewer)}
+			cmd := &editCmd{Cmd: exec.Command(m.editor, m.viewer)}
 			return m, tea.Exec(cmd, func(err error) tea.Msg {
 				m.loadViewerBuffer()
 				return nil
@@ -707,11 +705,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "E":
 		cur := p.Current()
 		if cur != nil {
-			editor := os.Getenv("EDITOR")
-			if editor == "" {
-				editor = "vim"
-			}
-			m.runAction(actions.Action{Command: fmt.Sprintf("%s $P", editor)}, cur.Path)
+			m.runAction(actions.Action{Command: fmt.Sprintf("%s $P", m.editor)}, cur.Path)
 		}
 
 	case "!":
@@ -726,7 +720,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) runAction(act actions.Action, path string) string {
-	editor := os.Getenv("EDITOR")
+	editor := m.editor
 	if editor == "" {
 		editor = "vim"
 	}

@@ -12,6 +12,11 @@ import (
 func main() {
 	switchToEnglishInput()
 
+	cfg, err := loadConfig("../config.yaml")
+	if err != nil {
+		cfg = &Config{Editor: "vim"}
+	}
+
 	leftDir := ""
 	rightDir := ""
 
@@ -33,7 +38,7 @@ func main() {
 		rightDir = leftDir
 	}
 
-	m := ui.NewModel(leftDir, rightDir)
+	m := ui.NewModel(leftDir, rightDir, cfg.Editor)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
