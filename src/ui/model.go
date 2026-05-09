@@ -405,7 +405,11 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if cur == nil {
 			return m, nil
 		}
-		if cur.IsDir {
+		if msg.Alt {
+			if !cur.IsDir {
+				_ = openFile(cur.Path)
+			}
+		} else if cur.IsDir {
 			if p.IsArchive && cur.Name == ".." && p.Dir == p.ArchiveRoot {
 				_ = os.RemoveAll(p.Dir)
 				p.IsArchive = false
