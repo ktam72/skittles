@@ -707,7 +707,11 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		cur := p.Current()
 		if cur != nil {
 			switchToEnglishInput()
-			_ = m.runAction(actions.Action{Command: fmt.Sprintf("%s $P", m.editor)}, cur.Path)
+			cmd := &editCmd{Cmd: exec.Command(m.editor, cur.Path)}
+			return m, tea.Exec(cmd, func(err error) tea.Msg {
+				p.Reload()
+				return nil
+			})
 		}
 
 	case "i", "I":
