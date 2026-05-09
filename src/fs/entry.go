@@ -31,11 +31,14 @@ type Entry struct {
 	IsLink   bool
 	IsMarked bool
 	Owner    string
+	Group    string
 }
 
 var (
 	uidCache   = make(map[int]string)
 	uidCacheMu sync.RWMutex
+	gidCache   = make(map[int]string)
+	gidCacheMu sync.RWMutex
 )
 
 func lookupUser(uid int) string {
@@ -54,6 +57,25 @@ func lookupUser(uid int) string {
 	uidCacheMu.Lock()
 	uidCache[uid] = s
 	uidCacheMu.Unlock()
+	return s
+}
+
+func lookupGroup(gid int) string {
+	gidCacheMu.RLock()
+	s, ok := gidCache[gid]
+	gidCacheMu.RUnlock()
+	if ok {
+		return s
+	}
+	g, err := user.LookupGroupId(strconv.Itoa(gid))
+	if err != nil {
+		s = strconv.Itoa(gid)
+	} else {
+		s = g.Name
+	}
+	gidCacheMu.Lock()
+	gidCache[gid] = s
+	gidCacheMu.Unlock()
 	return s
 }
 
@@ -94,8 +116,10 @@ func ReadDir(dir string) (*Listing, error) {
 			}
 		}
 		owner := ""
+		group := ""
 		if stat, ok := fi.Sys().(*syscall.Stat_t); ok {
 			owner = lookupUser(int(stat.Uid))
+			group = lookupGroup(int(stat.Gid))
 		}
 		l.Entries = append(l.Entries, Entry{
 			Name:    e.Name(),
@@ -106,6 +130,7 @@ func ReadDir(dir string) (*Listing, error) {
 			IsDir:   fi.IsDir(),
 			IsLink:  isLink,
 			Owner:   owner,
+			Group:   group,
 		})
 	}
 	l.Sort()

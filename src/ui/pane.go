@@ -228,12 +228,19 @@ func (p *Pane) formatEntryLine(e *fs.Entry) string {
 	if len(owner) > 8 {
 		owner = owner[:8]
 	}
+	group := e.Group
+	if group == "" {
+		group = "?"
+	}
+	if len(group) > 8 {
+		group = group[:8]
+	}
 	size := ""
 	if !e.IsDir {
 		size = formatSize(e.Size)
 	}
 
-	fixed := len(icon) + 1 + 10 + 1 + 8 + 1 + 1 + 8
+	fixed := len(icon) + 1 + 10 + 1 + 8 + 1 + 8 + 1 + 1 + 8
 	nameWidth := p.Width - fixed
 	if nameWidth < 3 {
 		nameWidth = 3
@@ -244,7 +251,7 @@ func (p *Pane) formatEntryLine(e *fs.Entry) string {
 		name = name[:nameWidth-1] + "…"
 	}
 
-	return fmt.Sprintf("%s %s %-8s %-*s %8s", icon, perm, owner, nameWidth, name, size)
+	return fmt.Sprintf("%s %s %-8s %-8s %-*s %8s", icon, perm, owner, group, nameWidth, name, size)
 }
 
 func formatPerm(mode os.FileMode) string {
