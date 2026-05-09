@@ -1,7 +1,15 @@
 # Skittles
 
-X68000 用ファイラー [mint.x](https://opencode.ai) の設計思想を継承した、
-モダンな 2画面 TUI ファイルマネージャ。Pure Go、CGo不要。
+Two-pane file manager with a terminal window.
+2画面ファイラーにターミナル画面をくっつけたツールです。
+
+その昔のX68000 用ファイラー mint.x の設計思想をヒントに作りました。
+
+Pure Goで作成しているので、LinuxやWindowsのGo環境下でも動く可能性があります（未検証）
+
+opencode with DeepSeekV4 で設計、開発、検証を行いました。
+
+golangci-lintで検出した問題を潰してあります。
 
 ![Skittles Screenshot](screens/screen1.png)
 ![Skittles Screenshot](screens/screen2.png)
