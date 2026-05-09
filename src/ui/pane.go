@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ktam/skittles/fs"
+	"github.com/ktam72/skittles/src/fs"
 )
 
 type RowInfo struct {

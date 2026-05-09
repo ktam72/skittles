@@ -42,8 +42,8 @@ src/
 │   └─ hexview.go          ← バイナリファイルのHEX表示
 ├── actions/
 │   └─ registry.go         ← マジックバイト/拡張子/ファイル名によるアクション解決
-├── go.mod / go.sum         ← Goモジュール定義
-└── skittles                ← ビルド成果物（gitignore）
+├── go.mod / go.sum         ← Goモジュール定義（プロジェクトルート）
+├── src/                    ← Goソースコード
 ```
 
 ### データフロー
@@ -362,10 +362,9 @@ sr キーで循環: 名前 → 日時 → 拡張子 → サイズ → (戻る)
 ### ローカルビルド
 
 ```bash
-cd src
-go build -o ../skittles .
-go vet ./...
-golangci-lint run ./...
+go build -o skittles ./src
+go vet ./src/...
+golangci-lint run ./src/...
 ```
 
 ### 品質管理

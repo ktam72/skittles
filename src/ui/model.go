@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ktam/skittles/actions"
-	"github.com/ktam/skittles/fs"
+	"github.com/ktam72/skittles/src/actions"
+	"github.com/ktam72/skittles/src/fs"
 
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/quick"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ktam/skittles/ui"
+	"github.com/ktam72/skittles/src/ui"
 
 	tea "github.com/charmbracelet/bubbletea"
 )

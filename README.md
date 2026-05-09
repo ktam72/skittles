@@ -33,22 +33,20 @@ brew install ktam72/tap/skittles
 ### Go
 
 ```bash
-go install github.com/ktam72/skittles/src@latest
+go install github.com/ktam72/skittles@latest
 ```
-
-※ モジュールルートが `src/` のため `.../skittles/src` を指定します。
 
 ### 手動ビルド
 
 ```bash
 git clone git@github.com:ktam72/skittles.git
-cd skittles/src
+cd skittles
 
 # ビルド（CGo不要）
-go build -o ../skittles .
+go build -o skittles ./src
 
 # 実行
-cd .. && ./skittles
+./skittles
 ```
 
 #### アーカイブ形式対応
@@ -189,14 +187,13 @@ actions:
 ## 開発
 
 ```bash
-cd src
-go build -o ../skittles .              # ビルド（CGo不要）
-go vet ./...                            # 静的解析
-golangci-lint run ./...                 # Lint（0 issues）
+go build -o skittles ./src              # ビルド（CGo不要）
+go vet ./src/...                         # 静的解析
+golangci-lint run ./src/...              # Lint（0 issues）
 
 # クロスコンパイル
-GOOS=linux GOARCH=amd64 go build -o ../skittles-linux .
-GOOS=windows GOARCH=amd64 go build -o ../skittles.exe .
+GOOS=linux GOARCH=amd64 go build -o skittles-linux ./src
+GOOS=windows GOARCH=amd64 go build -o skittles.exe ./src
 ```
 
 ## ライセンス

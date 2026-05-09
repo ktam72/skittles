@@ -1,4 +1,4 @@
-module github.com/ktam/skittles
+module github.com/ktam72/skittles
 
 go 1.26.3
 
