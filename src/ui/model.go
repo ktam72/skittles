@@ -308,6 +308,7 @@ func (m *Model) handleViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case tea.KeyRunes:
 		if string(msg.Runes) == "e" || string(msg.Runes) == "E" {
+			switchToEnglishInput()
 			cmd := &editCmd{Cmd: exec.Command(m.editor, m.viewer)}
 			return m, tea.Exec(cmd, func(err error) tea.Msg {
 				m.loadViewerBuffer()
@@ -705,6 +706,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "E":
 		cur := p.Current()
 		if cur != nil {
+			switchToEnglishInput()
 			m.runAction(actions.Action{Command: fmt.Sprintf("%s $P", m.editor)}, cur.Path)
 		}
 
