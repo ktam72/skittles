@@ -54,8 +54,10 @@ cd skittles/src
 brew install libarchive p7zip
 
 # ビルド
-go build -o skittles .
-./skittles
+go build -o ../skittles .
+
+# 実行
+cd .. && ./skittles
 ```
 
 #### アーカイブ形式対応と依存
@@ -132,13 +134,15 @@ actions:
 # 依存（CGo有効時）
 brew install libarchive p7zip
 
-# ビルド
-CGO_ENABLED=1 go build -o skittles .
-go vet ./...                         # 静的解析
-golangci-lint run ./...              # Lint（0 issues）
+# ビルド（src/ 内で実行）
+cd src
+CGO_ENABLED=1 go build -o ../skittles .
+cd ..
+go vet ./src/...                     # 静的解析
+golangci-lint run ./src/...          # Lint（0 issues）
 
 # 非CGoビルド（外部コマンド依存）
-CGO_ENABLED=0 go build -o skittles .
+cd src && CGO_ENABLED=0 go build -o ../skittles .
 
 # クロスコンパイル
 GOOS=linux GOARCH=amd64 go build -o skittles-linux .

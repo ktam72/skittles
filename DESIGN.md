@@ -325,7 +325,7 @@ sr キーで循環: 名前 → 日時 → 拡張子 → サイズ → (戻る)
 
 ```bash
 cd src
-go build -o skittles .
+go build -o ../skittles .
 ```
 
 ### 品質管理
