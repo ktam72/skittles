@@ -9,7 +9,7 @@ Skittles は X68000 用ファイラー mint.x (Madoka INTerpreter) の設計思�
 
 - 2画面ペインが暗黙の source/destination コンテキストを提供し、CLI操作を直感的にする
 - macOS / Linux / Windows のクロスプラットフォーム対応
-- Homebrew 一発インストールを可能とするシングルバイナリ配布
+- シングルバイナリ配布
 - 拡張子→アクションマッピングの外部設定分離
 
 ---
@@ -518,5 +518,5 @@ Phase14  ─ パスヒストリ・chmod・ファイル比較      ✅ 完了 (v2
 Phase15  ─ ビューア内検索                        ✅ 完了 (v2.0.0)
 Phase16  ─ 行番号・sudo禁止                      ✅ 完了 (v2.1.0)
 Phase17  ─ セキュリティレビュー・入力バリデーション ✅ 完了 (v2.2.0)
-Phase18  ─ Homebrew Formula / 配布               ⬜ 未着手
+Phase18  ─ （Homebrew Formula / 配布）            ⬜ 対応しない
 ```
