@@ -40,10 +40,8 @@ func ExtractToTemp(src string) (string, error) {
 		}
 	case ".7z":
 		err = extractSevenZip(src, dest)
-	case ".lzh", ".lha":
-		err = extractUsing(src, dest, "lha", "x")
-case ".rar":
-	err = extractRar(src, dest)
+	case ".rar":
+		err = extractRar(src, dest)
 	default:
 		err = fmt.Errorf("unsupported archive: %s", ext)
 	}
@@ -69,10 +67,8 @@ func ExtractCmdFor(path string) string {
 		return "gunzip -c $P > ${P%.*}"
 	case ".bz2":
 		return "bunzip2 -c $P > ${P%.*}"
-	case ".lzh", ".lha":
-		return "lha x $P"
-case ".rar":
-	return "unar -o . -D -q $P"
+	case ".rar":
+		return ""
 	case ".7z":
 		return "7z x $P"
 	default:

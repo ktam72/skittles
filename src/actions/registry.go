@@ -212,8 +212,6 @@ var extActions = map[string]Action{
 	".bmp":  {Command: "open $P"},
 	".webp": {Command: "open $P"},
 	".mdx":  {Command: "open -a MP4M.app $P"},
-	".lzh":  {Browse: true},
-	".lha":  {Browse: true},
 	".zip":  {Browse: true},
 	".tar":  {Browse: true},
 	".tgz":  {Browse: true},

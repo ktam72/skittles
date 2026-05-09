@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/bodgit/sevenzip"
+	"github.com/nwaples/rardecode/v2"
 )
 
 func extractZip(src, dest string) error {
@@ -200,22 +200,43 @@ func extractSevenZip(src, dest string) error {
 }
 
 func extractRar(src, dest string) error {
-	cmd := exec.Command("unar", "-o", dest, "-D", "-q", src)
-	cmd.Dir = dest
-	out, err := cmd.CombinedOutput()
+	f, err := os.Open(src)
 	if err != nil {
-		return fmt.Errorf("unar: %v\n%s", err, string(out))
+		return fmt.Errorf("open rar: %w", err)
 	}
-	return nil
-}
+	defer func() { _ = f.Close() }()
 
-func extractUsing(src, dest, tool string, args ...string) error {
-	all := append(args, src)
-	cmd := exec.Command(tool, all...)
-	cmd.Dir = dest
-	out, err := cmd.CombinedOutput()
+	rr, err := rardecode.NewReader(f)
 	if err != nil {
-		return fmt.Errorf("%s: %v\n%s", tool, err, string(out))
+		return fmt.Errorf("rar reader: %w", err)
+	}
+
+	for {
+		hdr, err := rr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("rar read: %w", err)
+		}
+		target := filepath.Join(dest, hdr.Name)
+		if !strings.HasPrefix(target, filepath.Clean(dest)+string(os.PathSeparator)) {
+			continue
+		}
+		if hdr.IsDir {
+			_ = os.MkdirAll(target, 0755)
+			continue
+		}
+		_ = os.MkdirAll(filepath.Dir(target), 0755)
+		out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, hdr.Mode())
+		if err != nil {
+			return fmt.Errorf("create %s: %w", hdr.Name, err)
+		}
+		_, err = io.Copy(out, rr)
+		_ = out.Close()
+		if err != nil {
+			return fmt.Errorf("write %s: %w", hdr.Name, err)
+		}
 	}
 	return nil
 }
