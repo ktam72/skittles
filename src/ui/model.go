@@ -26,6 +26,7 @@ const (
 	ModeView
 	ModeQuit
 	ModeConfirm
+	ModeRename
 )
 
 type Model struct {
@@ -43,9 +44,12 @@ type Model struct {
 	viewerOff int
 	err       error
 
-	confirmAction  func()
-	confirmMessage string
+	confirmAction   func()
+	confirmMessage  string
 	noDeleteConfirm bool
+
+	renamePath  string
+	renameInput []rune
 }
 
 const (
@@ -149,6 +153,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case ModeConfirm:
 			return m.handleConfirmMode(msg)
 
+		case ModeRename:
+			return m.handleRenameMode(msg)
+
 		default:
 			if m.Focus == focusConsole {
 				return m.handleConsoleMode(msg)
@@ -175,6 +182,35 @@ func (m *Model) handleConfirmMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "3", "esc":
 		m.mode = ModeBrowse
+	}
+	return m, nil
+}
+
+func (m *Model) handleRenameMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.mode = ModeBrowse
+		m.renameInput = nil
+	case tea.KeyEnter:
+		newName := strings.TrimSpace(string(m.renameInput))
+		if newName != "" {
+			dir := filepath.Dir(m.renamePath)
+			newPath := filepath.Join(dir, newName)
+			if err := os.Rename(m.renamePath, newPath); err != nil {
+				m.err = err
+			}
+			m.FocusedPane().Reload()
+		}
+		m.mode = ModeBrowse
+		m.renameInput = nil
+	case tea.KeyBackspace:
+		if len(m.renameInput) > 0 {
+			m.renameInput = m.renameInput[:len(m.renameInput)-1]
+		}
+	default:
+		if !msg.Alt && len(msg.String()) == 1 {
+			m.renameInput = append(m.renameInput, []rune(msg.String())...)
+		}
 	}
 	return m, nil
 }
@@ -504,9 +540,14 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case "r":
+		cur := p.Current()
+		if cur != nil {
+			m.renamePath = cur.Path
+			m.renameInput = []rune(cur.Name)
+			m.mode = ModeRename
+		}
+	case "R":
 		p.Reload()
-
-	case "sr":
 		cycle := []fs.SortMode{fs.SortName, fs.SortTime, fs.SortExt, fs.SortSize}
 		idx := 0
 		for i, s := range cycle {

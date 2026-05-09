@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -100,7 +101,14 @@ func (m *Model) View() string {
 	if m.mode == ModeConfirm {
 		return m.renderWithConfirm(topBar)
 	}
+	if m.mode == ModeRename {
+		return m.renderWithRename(topBar)
+	}
 
+	return m.renderBrowseBody(topBar)
+}
+
+func (m *Model) renderBrowseBody(topBar string) string {
 	left := m.renderPane(m.Left, m.Focus == focusLeft)
 	right := m.renderPane(m.Right, m.Focus == focusRight)
 	top := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
@@ -120,6 +128,41 @@ func (m *Model) View() string {
 		m.err = nil
 	}
 
+	return body
+}
+
+func (m *Model) renderWithRename(topBar string) string {
+	base := filepath.Base(m.renamePath)
+	current := string(m.renameInput)
+	content := fmt.Sprintf("Rename:\n  %s\n\nto:\n  %s\n", base, current)
+	dialog := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("63")).
+		Padding(1, 2).
+		Width(50).
+		Render(content)
+	dialogH := strings.Count(dialog, "\n") + 3
+
+	savedH := m.Left.Height
+	m.Left.Height -= dialogH
+	m.Right.Height -= dialogH
+	if m.Left.Height < 3 {
+		m.Left.Height = 3
+		m.Right.Height = 3
+	}
+	left := m.renderPane(m.Left, m.Focus == focusLeft)
+	right := m.renderPane(m.Right, m.Focus == focusRight)
+	m.Left.Height = savedH
+	m.Right.Height = savedH
+
+	top := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	sep := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Render(strings.Repeat("─", m.Width))
+	console := m.renderConsole()
+	bindings := m.renderBindings()
+
+	body := lipgloss.JoinVertical(lipgloss.Left, topBar, top, dialog, sep, console, bindings)
 	return body
 }
 
@@ -251,7 +294,7 @@ func (m *Model) styleRow(r RowInfo, paneWidth int) string {
 func (m *Model) renderBindings() string {
 	hints := []string{
 		"↑↓:nav", "Enter:open", "Tab:focus(3-pane)",
-		"Space:mark", "c:copy", "m:move", "d:del", "p:preview",
+		"Space:mark", "r:rename", "c:copy", "m:move", "d:del", "p:preview",
 		"ESC×2:quit",
 	}
 	return hintStyle.Render(strings.Join(hints, "  |  "))
