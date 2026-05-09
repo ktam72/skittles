@@ -276,7 +276,7 @@ func (m *Model) loadViewerBuffer() {
 		return
 	}
 
-	text := string(data)
+	text := fs.DecodeText(data)
 	ext := strings.ToLower(filepath.Ext(m.viewer))
 
 	if ext == ".md" {
