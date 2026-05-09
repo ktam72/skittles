@@ -417,7 +417,7 @@ GOOS=linux GOARCH=amd64 go build -o skittles-linux .
 ### インストール
 
 ```bash
-go install github.com/ktam72/skittles@latest
+go install github.com/ktam72/skittles@v2.3.1
 # または
 git clone ... && cd skittles && go build -o skittles . && ./skittles
 ```

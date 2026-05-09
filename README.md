@@ -36,7 +36,7 @@ golangci-lintで検出した問題を潰してあります。
 ### Go
 
 ```bash
-go install github.com/ktam72/skittles@latest
+go install github.com/ktam72/skittles@v2.3.1
 ```
 
 ### 手動ビルド
