@@ -14,6 +14,7 @@ import (
 
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/quick"
+	"github.com/atotto/clipboard"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -404,12 +405,55 @@ func (m *Model) handleConsoleMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyTab:
 		m.cycleFocus()
 
+	case tea.KeyRunes:
+		switch string(msg.Runes) {
+		case "y":
+			if len(m.Console.Input) == 0 {
+				m.copyConsoleLines(false)
+			} else {
+				m.Console.InsertRune('y')
+			}
+		case "Y":
+			if len(m.Console.Input) == 0 {
+				m.copyConsoleLines(true)
+			} else {
+				m.Console.InsertRune('Y')
+			}
+		default:
+			for _, r := range msg.Runes {
+				m.Console.InsertRune(r)
+			}
+		}
+
 	default:
 		if !msg.Alt && msg.String() != "" && len(msg.String()) == 1 {
 			m.Console.InsertRune(rune(msg.String()[0]))
 		}
 	}
 	return m, nil
+}
+
+func (m *Model) copyConsoleLines(all bool) {
+	var lines []string
+	if all {
+		lines = m.Console.Output
+	} else {
+		start := m.Console.Scroll - (m.Console.Height - 3)
+		if start < 0 {
+			start = 0
+		}
+		end := m.Console.Scroll
+		if end > len(m.Console.Output) {
+			end = len(m.Console.Output)
+		}
+		lines = m.Console.Output[start:end]
+	}
+	text := strings.Join(lines, "\n")
+	if err := clipboard.WriteAll(text); err != nil {
+		m.Console.AddOutput(fmt.Sprintf("clipboard error: %v", err))
+	} else {
+		m.Console.AddOutput(fmt.Sprintf("copied %d lines", len(lines)))
+	}
 }
 
 func (m *Model) cycleFocus() {
