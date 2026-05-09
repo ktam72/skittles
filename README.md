@@ -1,6 +1,7 @@
 # Skittles
 
 Two-pane file manager with a terminal window.
+
 2画面ファイラーにターミナル画面をくっつけたツールです。
 
 その昔のX68000 用ファイラー mint.x の設計思想をヒントに作りました。
