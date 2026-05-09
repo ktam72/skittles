@@ -571,6 +571,11 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if cur != nil && !cur.IsDir {
 			_ = openFile(cur.Path)
 		}
+	case "π":
+		cur := p.Current()
+		if cur != nil && !cur.IsDir {
+			_ = openFile(cur.Path)
+		}
 	case "x":
 		cur := p.Current()
 		if cur != nil && !cur.IsDir {
