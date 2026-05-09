@@ -17,7 +17,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const version = "0.3.0"
+const version = "0.4.0"
 
 type Mode int
 
@@ -406,8 +406,16 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if cur.IsDir {
-			abs, _ := filepath.Abs(cur.Path)
-			_ = p.Chdir(abs)
+			if p.IsArchive && cur.Name == ".." {
+				_ = os.RemoveAll(p.Dir)
+				p.IsArchive = false
+				p.ArchivePath = ""
+				_ = p.Chdir(p.RealDir)
+				p.RealDir = ""
+			} else {
+				abs, _ := filepath.Abs(cur.Path)
+				_ = p.Chdir(abs)
+			}
 		} else {
 			act := m.reg.Resolve(cur.Path)
 			if act.Browse {
