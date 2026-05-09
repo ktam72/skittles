@@ -43,6 +43,7 @@ type Model struct {
 	viewerBuf []string
 	viewerOff int
 	err       error
+	cursorOn  bool
 
 	confirmAction   func()
 	confirmMessage  string
@@ -119,6 +120,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case time.Time:
 		m.now = msg
+		m.cursorOn = !m.cursorOn
 		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg {
 			return t
 		})

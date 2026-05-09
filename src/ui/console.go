@@ -120,7 +120,7 @@ func (c *Console) RenderHeader() string {
 	return "Console"
 }
 
-func (c *Console) RenderBody() string {
+func (c *Console) RenderBody(cursorOn bool) string {
 	bodyH := c.Height - 2
 	if bodyH < 1 {
 		bodyH = 1
@@ -128,6 +128,11 @@ func (c *Console) RenderBody() string {
 	outH := bodyH - 1
 	if outH < 0 {
 		outH = 0
+	}
+
+	cursor := " "
+	if cursorOn {
+		cursor = "█"
 	}
 
 	w := c.Width - 2
@@ -150,11 +155,14 @@ func (c *Console) RenderBody() string {
 		body.WriteString(strings.Repeat(" ", w) + "\n")
 	}
 
-	prompt := fmt.Sprintf(" %s $ %s", c.Dir, string(c.Input))
-	if len(prompt) > w {
-		prompt = " $ " + string(c.Input)
-		if len(prompt) > w {
-			prompt = prompt[:w]
+	text := string(c.Input)
+	prompt := fmt.Sprintf(" %s $ %s%s", c.Dir, text, cursor)
+	if len(prompt) > w-1 {
+		short := fmt.Sprintf(" $ %s%s", text, cursor)
+		if len(short) > w-1 {
+			prompt = short[:w-1]
+		} else {
+			prompt = short
 		}
 	}
 	body.WriteString(prompt)

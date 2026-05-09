@@ -133,7 +133,11 @@ func (m *Model) renderBrowseBody(topBar string) string {
 
 func (m *Model) renderWithRename(topBar string) string {
 	base := filepath.Base(m.renamePath)
-	current := string(m.renameInput)
+	cursor := " "
+	if m.cursorOn {
+		cursor = "█"
+	}
+	current := string(m.renameInput) + cursor
 	content := fmt.Sprintf("Rename:\n  %s\n\nto:\n  %s\n", base, current)
 	dialog := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -253,7 +257,7 @@ func (m *Model) renderConsole() string {
 	header := m.Console.RenderHeader()
 	header = headerStyle.Render(header)
 
-	body := m.Console.RenderBody()
+	body := m.Console.RenderBody(m.cursorOn)
 	body = style.Render(body)
 
 	return lipgloss.JoinVertical(lipgloss.Left, header, body)
