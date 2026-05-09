@@ -96,6 +96,11 @@ func (m *Model) View() string {
 	}
 
 	topBar := m.renderTopBar()
+
+	if m.mode == ModeConfirm {
+		return m.renderWithConfirm(topBar)
+	}
+
 	left := m.renderPane(m.Left, m.Focus == focusLeft)
 	right := m.renderPane(m.Right, m.Focus == focusRight)
 	top := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
@@ -115,6 +120,47 @@ func (m *Model) View() string {
 		m.err = nil
 	}
 
+	return body
+}
+
+func (m *Model) renderWithConfirm(topBar string) string {
+	// dialog
+	opts := []string{
+		" 1. OK（毎回確認する）",
+		" 2. OK（以降確認しない）",
+		" 3. キャンセル",
+	}
+	optStr := strings.Join(opts, "\n")
+	content := fmt.Sprintf("\n%s\n\n%s\n", m.confirmMessage, optStr)
+	dialog := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("9")).
+		Padding(1, 2).
+		Width(40).
+		Render(content)
+	dialogH := strings.Count(dialog, "\n") + 3 // + border top/bottom extra spacing
+
+	// reduce pane height
+	savedH := m.Left.Height
+	m.Left.Height -= dialogH
+	m.Right.Height -= dialogH
+	if m.Left.Height < 3 {
+		m.Left.Height = 3
+		m.Right.Height = 3
+	}
+	left := m.renderPane(m.Left, m.Focus == focusLeft)
+	right := m.renderPane(m.Right, m.Focus == focusRight)
+	m.Left.Height = savedH
+	m.Right.Height = savedH
+
+	top := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	sep := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Render(strings.Repeat("─", m.Width))
+	console := m.renderConsole()
+	bindings := m.renderBindings()
+
+	body := lipgloss.JoinVertical(lipgloss.Left, topBar, top, dialog, sep, console, bindings)
 	return body
 }
 

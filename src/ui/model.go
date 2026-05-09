@@ -25,6 +25,7 @@ const (
 	ModeBrowse Mode = iota
 	ModeView
 	ModeQuit
+	ModeConfirm
 )
 
 type Model struct {
@@ -41,6 +42,10 @@ type Model struct {
 	viewerBuf []string
 	viewerOff int
 	err       error
+
+	confirmAction  func()
+	confirmMessage string
+	noDeleteConfirm bool
 }
 
 const (
@@ -141,12 +146,35 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case ModeView:
 			return m.handleViewMode(msg)
 
+		case ModeConfirm:
+			return m.handleConfirmMode(msg)
+
 		default:
 			if m.Focus == focusConsole {
 				return m.handleConsoleMode(msg)
 			}
 			return m.handleBrowseMode(msg)
 		}
+	}
+	return m, nil
+}
+
+func (m *Model) handleConfirmMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "1":
+		m.noDeleteConfirm = false
+		m.mode = ModeBrowse
+		if m.confirmAction != nil {
+			m.confirmAction()
+		}
+	case "2":
+		m.noDeleteConfirm = true
+		m.mode = ModeBrowse
+		if m.confirmAction != nil {
+			m.confirmAction()
+		}
+	case "3", "esc":
+		m.mode = ModeBrowse
 	}
 	return m, nil
 }
@@ -431,11 +459,28 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "d":
 		entries := p.SelectedEntries()
 		if len(entries) > 0 {
-			for _, e := range entries {
-				_ = fs.Delete(e.Path)
+			if m.noDeleteConfirm {
+				for _, e := range entries {
+					_ = fs.Delete(e.Path)
+				}
+				p.ClearMarks()
+				p.Reload()
+			} else {
+				names := make([]string, len(entries))
+				for i, e := range entries {
+					names[i] = e.Name
+				}
+				msg := fmt.Sprintf("Delete %d file(s)?\n  %s", len(entries), strings.Join(names, "\n  "))
+				m.confirmMessage = msg
+				m.confirmAction = func() {
+					for _, e := range entries {
+						_ = fs.Delete(e.Path)
+					}
+					p.ClearMarks()
+					p.Reload()
+				}
+				m.mode = ModeConfirm
 			}
-			p.ClearMarks()
-			p.Reload()
 		}
 
 	case "a":
