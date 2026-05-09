@@ -424,10 +424,14 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else {
 			act := m.reg.Resolve(cur.Path)
 			if act.Browse {
+				m.Console.AddOutput(fmt.Sprintf("Extracting %s ...", cur.Name))
 				tmp, err := fs.ExtractToTemp(cur.Path)
 				if err != nil {
 					m.err = err
+					m.Console.AddOutput(fmt.Sprintf("error: %v", err))
 				} else {
+					entries, _ := os.ReadDir(tmp)
+					m.Console.AddOutput(fmt.Sprintf("done: %d entries extracted", len(entries)))
 					p.ArchivePath = cur.Path
 					p.RealDir = p.Dir
 					p.IsArchive = true
