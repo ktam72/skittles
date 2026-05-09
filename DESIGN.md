@@ -20,30 +20,31 @@ Skittles は X68000 用ファイラー mint.x (Madoka INTerpreter) の設計思�
 
 ```
 src/
-├── main.go                  ← エントリポイント、tea.NewProgram
-│   ├─ config.go           ← config.yaml 読み込み（editor設定等）
-│   ├─ input_darwin.go     ← macOS: 起動時に英数入力切替（ビルドタグ分離）
-│   └─ input_other.go      ← Linux/Windows: 何もしない（no-op）
 ├── ui/
-│   ├─ model.go            ← Elm Model/Update（全状態管理・イベントディスパッチ）
-│   ├─ pane.go             ← ファイルペイン（カーソル/マーク/ソート/表示、パーミッション+所有者表示）
-│   ├─ console.go          ← コンソールペイン（出力バッファ/コマンド履歴/入力、cd対応、$プロンプト）
-│   ├─ mdrender.go         ← Markdown レンダリング（glamour + プレーンテキストフォールバック）
-│   ├─ open_darwin.go      ← open（macOS: open, Linux: xdg-open, Windows: ShellExecuteW）
-│   ├─ open_linux.go
-│   ├─ open_windows.go
-│   ├─ input_darwin.go     ← 英数入力切替（uiパッケージ版、コンソールフォーカス時）
-│   └─ view.go             ← lipgloss レンダリング、3ペインレイアウト、トップバー
+│   ├── model.go            ← Elm Model/Update（全状態管理・イベントディスパッチ）
+│   ├── pane.go             ← ファイルペイン（カーソル/マーク/ソート/表示、パーミッション+所有者表示）
+│   ├── console.go          ← コンソールペイン（出力バッファ/コマンド履歴/入力、cd対応、$プロンプト）
+│   ├── mdrender.go         ← Markdown レンダリング（glamour + プレーンテキストフォールバック）
+│   ├── open_darwin.go      ← open（macOS: open, Linux: xdg-open, Windows: ShellExecuteW）
+│   ├── open_linux.go
+│   ├── open_windows.go
+│   ├── input_darwin.go     ← 英数入力切替（uiパッケージ版、コンソールフォーカス時）
+│   ├── input_other.go
+│   └── view.go             ← lipgloss レンダリング、3ペインレイアウト、トップバー
 ├── fs/
-│   ├─ entry.go            ← ファイルエントリ、ディレクトリ一覧、ソート、所有者/グループ
-│   ├─ ops.go              ← Copy/Move/Delete/Touch
-│   ├─ archive_common.go   ← アーカイブ展開（ZIP/TAR/GZ/BZ2→Go標準、7z→sevenzip、全てpure Go）
-│   ├─ archive_nocgo.go    ← ExtractToTemp エントリ
-│   ├─ compare.go          ← 左右ペインのファイル比較
-│   ├─ encode.go           ← 文字コード自動判別（UTF-8/Shift-JIS/EUC-JP）
-│   └─ hexview.go          ← バイナリファイルのHEX表示
+│   ├── entry.go            ← ファイルエントリ、ディレクトリ一覧、ソート、所有者/グループ
+│   ├── ops.go              ← Copy/Move/Delete/Touch/Chmod
+│   ├── archive_common.go   ← アーカイブ展開（ZIP/TAR/GZ/BZ2→Go標準、7z→sevenzip、全てpure Go）
+│   ├── archive_nocgo.go    ← ExtractToTemp エントリ
+│   ├── compare.go          ← 左右ペインのファイル比較
+│   ├── encode.go           ← 文字コード自動判別（UTF-8/Shift-JIS/EUC-JP）
+│   └── hexview.go          ← バイナリファイルのHEX表示
 ├── actions/
-│   └─ registry.go         ← マジックバイト/拡張子/ファイル名によるアクション解決
+│   └── registry.go         ← マジックバイト/拡張子/ファイル名によるアクション解決
+├── main.go                 ← エントリポイント、tea.NewProgram
+├── config.go               ← config.yaml 読み込み（editor設定等）
+├── input_darwin.go         ← macOS: 起動時に英数入力切替（ビルドタグ分離）
+├── input_other.go          ← Linux/Windows: 何もしない（no-op）
 ├── go.mod / go.sum         ← Goモジュール定義（プロジェクトルート）
 ```
 
@@ -80,11 +81,11 @@ Tab キーで Left → Right → Console → Left と巡回。アクティブペ
 
 ### 2. トップバー
 
-画面上端に常時表示。アプリ名 `Skittles v2.2.1`（左）と現在日時（右）を太字・紺背景で表示。
+画面上端に常時表示。アプリ名 `Skittles v2.2.2`（左）と現在日時（右）を太字・紺背景で表示。
 時計は `tea.Tick(time.Second)` による定期購読で1秒ごとに更新。
 
 ```
-Skittles v2.2.1                                2026/05/09 12:34:56
+Skittles v2.2.2                                2026/05/09 12:34:56
 ```
 
 ### 3. 暗黙の source/destination コンテキスト
@@ -396,9 +397,9 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 ### ローカルビルド
 
 ```bash
-go build -o skittles ./src
-go vet ./src/...
-golangci-lint run ./src/...
+go build -o skittles .
+go vet ./...
+golangci-lint run ./...
 ```
 
 ### 品質管理
@@ -409,15 +410,14 @@ golangci-lint run ./src/...
 
 ```bash
 # Linux
-GOOS=linux GOARCH=amd64 go build -o skittles-linux ./src
-# Windows（※注: owner/group 表示が Unix 依存のため未対応）
-# GOOS=windows GOARCH=amd64 go build -o skittles.exe ./src
+GOOS=linux GOARCH=amd64 go build -o skittles-linux .
+# Windows（※注: owner/group 表示が Unix 依存のためビルド不可）
 ```
 
 ### インストール
 
 ```bash
-go install github.com/ktam/skittles@latest     # 任意の場所に
+go install github.com/ktam72/skittles@latest
 # または
 git clone ... && cd skittles && go build -o skittles . && ./skittles
 ```
@@ -432,7 +432,7 @@ git clone ... && cd skittles && go build -o skittles . && ./skittles
 | Linux | ✅ | ✅（未検証） | 入力ソース切替は no-op。`xdg-open` は未統合 |
 | Windows | ❌ | ❌ | `syscall.Stat_t` 非対応によりビルド不可 |
 
-プラットフォーム依存は `input_darwin.go` / `input_other.go` および `open_darwin.go` / `open_linux.go` / `open_windows.go` のビルドタグ分離のみ。
+プラットフォーム依存は `main.go`＋`input_darwin.go` / `input_other.go` および `ui/open_darwin.go` / `ui/open_linux.go` / `ui/open_windows.go` のビルドタグ分離のみ。
 
 ---
 
