@@ -165,7 +165,7 @@ func (m *Model) renderWithConfirm(topBar string) string {
 }
 
 func (m *Model) renderTopBar() string {
-	left := fmt.Sprintf(" Skittles v%s ", version)
+	left := fmt.Sprintf(" Skittles v%s by ktam72 ", version)
 	right := m.now.Format(" 2006/01/02 15:04:05 ")
 	padding := m.Width - lipgloss.Width(left) - lipgloss.Width(right)
 	if padding < 1 {
