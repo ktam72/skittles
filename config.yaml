@@ -1,0 +1,79 @@
+# Skittles - Two-pane file manager
+# Extension-to-action mappings
+
+editor: vim
+
+actions:
+  # Archive files
+  - match: ".zip"
+    command: "unzip -o $P"
+  - match: ".lzh"
+    command: "lha x $P"
+  - match: ".tar"
+    command: "tar xf $P"
+  - match: ".gz"
+    command: "gunzip $P"
+  - match: ".bz2"
+    command: "bunzip2 $P"
+  - match: ".rar"
+    command: "unrar x $P"
+  - match: ".7z"
+    command: "7z x $P"
+
+  # Text files (built-in viewer)
+  - match: ".txt"
+    viewer: true
+  - match: ".md"
+    viewer: true
+  - match: ".go"
+    viewer: true
+  - match: ".rs"
+    viewer: true
+  - match: ".py"
+    viewer: true
+  - match: ".js"
+    viewer: true
+  - match: ".ts"
+    viewer: true
+  - match: ".c"
+    viewer: true
+  - match: ".h"
+    viewer: true
+  - match: ".cpp"
+    viewer: true
+  - match: ".hpp"
+    viewer: true
+  - match: ".java"
+    viewer: true
+  - match: ".sh"
+    viewer: true
+  - match: ".yaml"
+    viewer: true
+  - match: ".yml"
+    viewer: true
+  - match: ".json"
+    viewer: true
+  - match: ".xml"
+    viewer: true
+  - match: ".toml"
+    viewer: true
+  - match: ".conf"
+    viewer: true
+  - match: ".log"
+    viewer: true
+  - match: ".csv"
+    viewer: true
+  - match: ".rb"
+    viewer: true
+  - match: ".swift"
+    viewer: true
+
+  # Special files
+  - match: "!Makefile"
+    viewer: true
+  - match: "!Dockerfile"
+    viewer: true
+
+  # Default: open with editor
+  - match: "*"
+    command: "$EDITOR $P"
