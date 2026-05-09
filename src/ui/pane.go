@@ -30,6 +30,7 @@ type Pane struct {
 	ShowDot     bool
 	IsArchive   bool
 	ArchivePath string
+	ArchiveRoot string
 	RealDir     string
 }
 

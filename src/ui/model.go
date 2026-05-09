@@ -406,10 +406,11 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if cur.IsDir {
-			if p.IsArchive && cur.Name == ".." {
+			if p.IsArchive && cur.Name == ".." && p.Dir == p.ArchiveRoot {
 				_ = os.RemoveAll(p.Dir)
 				p.IsArchive = false
 				p.ArchivePath = ""
+				p.ArchiveRoot = ""
 				_ = p.Chdir(p.RealDir)
 				p.RealDir = ""
 			} else {
@@ -426,6 +427,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					p.ArchivePath = cur.Path
 					p.RealDir = p.Dir
 					p.IsArchive = true
+					p.ArchiveRoot = tmp
 					_ = p.Chdir(tmp)
 				}
 			} else if act.Look {
@@ -461,6 +463,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				_ = os.RemoveAll(p.Dir)
 				p.IsArchive = false
 				p.ArchivePath = ""
+				p.ArchiveRoot = ""
 				_ = p.Chdir(p.RealDir)
 				p.RealDir = ""
 			} else {
