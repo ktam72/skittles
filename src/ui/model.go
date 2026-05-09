@@ -381,6 +381,26 @@ func (m *Model) handleConsoleMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.Console.NextHistory()
 		}
 
+	case tea.KeyPgUp:
+		page := m.Console.Height - 3
+		if page < 1 {
+			page = 1
+		}
+		m.Console.Scroll -= page
+		if m.Console.Scroll < 0 {
+			m.Console.Scroll = 0
+		}
+
+	case tea.KeyPgDown:
+		page := m.Console.Height - 3
+		if page < 1 {
+			page = 1
+		}
+		m.Console.Scroll += page
+		if m.Console.Scroll > len(m.Console.Output) {
+			m.Console.Scroll = len(m.Console.Output)
+		}
+
 	case tea.KeyTab:
 		m.cycleFocus()
 
