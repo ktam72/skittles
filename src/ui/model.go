@@ -479,9 +479,23 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "tab":
 		m.cycleFocus()
 
-	case "backspace", "bs", " ":
+	case " ":
 		p.ToggleMark()
 		p.Down(1)
+	case "backspace", "bs":
+		if p.Dir != "/" {
+			if p.IsArchive {
+				_ = os.RemoveAll(p.Dir)
+				p.IsArchive = false
+				p.ArchivePath = ""
+				p.ArchiveRoot = ""
+				_ = p.Chdir(p.RealDir)
+				p.RealDir = ""
+			} else {
+				parent := filepath.Dir(strings.TrimRight(p.Dir, "/"))
+				_ = p.Chdir(parent)
+			}
+		}
 
 	case "c":
 		entries := p.SelectedEntries()
