@@ -21,6 +21,7 @@ Skittles は X68000 用ファイラー mint.x (Madoka INTerpreter) の設計思�
 ```
 src/
 ├── main.go                  ← エントリポイント、tea.NewProgram
+│   ├─ config.go           ← config.yaml 読み込み（editor設定等）
 │   ├─ input_darwin.go     ← macOS: 起動時に英数入力切替（ビルドタグ分離）
 │   └─ input_other.go      ← Linux/Windows: 何もしない（no-op）
 ├── ui/
@@ -218,8 +219,9 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 | d | 削除（確認ダイアログ → 毎回確認/以降省略/キャンセル） |
 | r | ファイル名リネーム |
 | R | カレントディレクトリ再読込 |
+| e / E | **エディタで開く（config.yaml の editor 設定）** |
+| i / I | **ファイルプロパティ表示（ダイアログ）** |
 | sr | ソート順切替（名前→日時→拡張子→サイズ→ループ） |
-| E | エディタで開く（$EDITOR） |
 | ! | コンソールペインへジャンプ（コマンド入力モード） |
 | ESC | 終了確認 |
 
@@ -268,6 +270,7 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 | → | 1ページ下（ROLLDOWN） |
 | PgUp | 1ページ上 |
 | PgDown | 1ページ下 |
+| e / E | **エディタで開く（tea.Exec → 編集後ビューア再読込）** |
 | ESC | ビューア終了、ファイルペイン復帰 (tea.ClearScreen 発行) |
 
 ### 終了確認
@@ -445,7 +448,8 @@ Phase 8  ─ リネームモード・削除確認              ✅ 完了
 Phase 9  ─ 文字コード自動判別                    ✅ 完了
 Phase10  ─ クロスプラットフォーム（pure Go）      ✅ 完了
 Phase11  ─ メモリ管理・バッファ制限              ✅ 完了
-Phase12  ─ インクリメンタルサーチ                ⬜ 未着手
-Phase13  ─ Homebrew Formula / 配布               ⬜ 未着手
-Phase14  ─ プラグインシステム                    ⬜ 未着手
+Phase12  ─ エディタ連携・ファイルプロパティ         ✅ 完了
+Phase13  ─ インクリメンタルサーチ                ⬜ 未着手
+Phase14  ─ Homebrew Formula / 配布               ⬜ 未着手
+Phase15  ─ プラグインシステム                    ⬜ 未着手
 ```
