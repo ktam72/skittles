@@ -29,7 +29,7 @@ src/
 │   ├─ pane.go             ← ファイルペイン（カーソル/マーク/ソート/表示、パーミッション+所有者表示）
 │   ├─ console.go          ← コンソールペイン（出力バッファ/コマンド履歴/入力、cd対応、$プロンプト）
 │   ├─ mdrender.go         ← Markdown レンダリング（glamour + プレーンテキストフォールバック）
-│   ├─ open_darwin.go      ← open（macOS: open, Linux: xdg-open, Windows: start）
+│   ├─ open_darwin.go      ← open（macOS: open, Linux: xdg-open, Windows: ShellExecuteW）
 │   ├─ open_linux.go
 │   ├─ open_windows.go
 │   ├─ input_darwin.go     ← 英数入力切替（uiパッケージ版、コンソールフォーカス時）
@@ -39,6 +39,7 @@ src/
 │   ├─ ops.go              ← Copy/Move/Delete/Touch
 │   ├─ archive_common.go   ← アーカイブ展開（ZIP/TAR/GZ/BZ2→Go標準、7z→sevenzip、全てpure Go）
 │   ├─ archive_nocgo.go    ← ExtractToTemp エントリ
+│   ├─ compare.go          ← 左右ペインのファイル比較
 │   ├─ encode.go           ← 文字コード自動判別（UTF-8/Shift-JIS/EUC-JP）
 │   └─ hexview.go          ← バイナリファイルのHEX表示
 ├── actions/
@@ -72,22 +73,22 @@ src/
 
 Tab キーで Left → Right → Console → Left と巡回。アクティブペインは青色ボーダー、非アクティブは灰色。
 
-レイアウト計算式（h = ターミナルの行数）:
+レイアウト計算式（h = ターミナルの行数、固定 40）:
 - トップバー: 1行
 - ファイルペインの内容高さ: `h - consoleHeight - 9`
-- コンソールペインの内容高さ: `consoleHeight`（= 8）
+- コンソールペインの内容高さ: `consoleHeight`（= 10）
 - 残り: 枠線 (2+2) + セパレータ(1) + ヒント行(1) = 9
 
-### 7. トップバー
+### 2. トップバー
 
-画面上端に常時表示。アプリ名 `Skittles v0.1.0`（左）と現在日時（右）を太字・紺背景で表示。
+画面上端に常時表示。アプリ名 `Skittles v2.2.1`（左）と現在日時（右）を太字・紺背景で表示。
 時計は `tea.Tick(time.Second)` による定期購読で1秒ごとに更新。
 
 ```
-Skittles v0.1.0                                2026/05/09 12:34:56
+Skittles v2.2.1                                2026/05/09 12:34:56
 ```
 
-### 2. 暗黙の source/destination コンテキスト
+### 3. 暗黙の source/destination コンテキスト
 
 フォーカス中のペイン = source、反対のファイルペイン = destination として動作する。
 
@@ -95,7 +96,7 @@ Skittles v0.1.0                                2026/05/09 12:34:56
 - `m` → 同様に**移動**
 - マークがある場合は全マークエントリ、ない場合はカーソル上の1エントリのみ
 
-### 3. 拡張子→アクション解決 (actions/registry.go)
+### 4. 拡張子→アクション解決 (actions/registry.go)
 
 4段階の優先度でアクションを解決:
 
@@ -114,7 +115,7 @@ Skittles v0.1.0                                2026/05/09 12:34:56
 
 `.mdx` は `open -a MP4M.app $P` にマッピング。画像（`.png`等）は `open $P` でプレビュー.app連携。
 
-### 4. コンソールペイン
+### 5. コンソールペイン
 
 - コンソール出力は最大100KBまで保持、超過時は古い行から自動削除
 - **cd ビルトイン**: `~` 展開対応。`cd ~/Downloads` が動作
@@ -123,7 +124,7 @@ Skittles v0.1.0                                2026/05/09 12:34:56
 - **y/Y**: 表示中範囲 / 全行をクリップボードにコピー（`github.com/atotto/clipboard`）
 - **スクロールバー**: 右端に表示。つまみ（█）とトラック（│）で現在位置を表示
 
-### 5. ビルトインビューア
+### 6. ビルトインビューア
 
 テキストファイルのインライン表示。3段階のレンダリング:
 
@@ -147,15 +148,15 @@ Markdown は `ui/mdrender.go` でレンダリング。最初に `glamour.Render`
 
 スクロール対応: ↑↓/PgUp/PgDown/←(ROLLUP)/→(ROLLDOWN)、ESC で終了。
 
-### 6. パーミッション表示
+### 7. パーミッション表示
 
 各行に `drwxr-xr-x` 形式のパーミッションを表示（`pane.go` `formatPerm()`）。
 - 先頭文字: `d`(ディレクトリ) / `l`(シンボリックリンク) / `-`(通常ファイル)
 - setuid/setgid/sticky ビットにも対応（`s`/`S`/`t`/`T`）
 
-### 7. アーカイブ内部ブラウズ
+### 8. アーカイブ内部ブラウズ
 
-`.zip` / `.tar` / `.tgz` / `.7z` / `.lzh` / `.rar` / `.gz` / `.bz2` を Enter で開くと、
+`.zip` / `.tar` / `.tgz` / `.7z` / `.gz` / `.bz2` を Enter で開くと、
 テンポラリディレクトリに展開してペインに表示。**通常のディレクトリ操作**（コピー/移動/削除）がそのまま使える。
 
 ```
@@ -177,21 +178,23 @@ Markdown は `ui/mdrender.go` でレンダリング。最初に `glamour.Render`
 - ファイル: 白 → **薄紫**
 - カーソル: 青背景 → **濃紫背景**
 
-### 8. アーカイブ展開エンジン
+### 9. アーカイブ展開エンジン
 
-`fs/` 配下のファイルで構成:
+`fs/archive_common.go` + `fs/archive_nocgo.go` で構成:
 
-| ファイル | 内容 |
-|---------|------|
-| `archive_common.go` | ZIP/TAR/GZ/BZ2 → Go標準ライブラリ、7z → sevenzip（pure Go） |
-| `archive_nocgo.go` | ExtractToTemp エントリ |
+| ライブラリ | 対応形式 |
+|-----------|---------|
+| Go標準 `archive/zip` | ZIP |
+| Go標準 `archive/tar` | TAR |
+| Go標準 `compress/gzip` | GZ / TGZ |
+| Go標準 `compress/bzip2` | BZ2 / TBZ2 |
+| `github.com/bodgit/sevenzip`（pure Go） | 7z |
 
 全プラットフォーム共通。CGo不要。外部コマンド依存ゼロ。
-対応形式: ZIP / TAR / TGZ / GZ / BZ2 / TBZ2 / 7z
 
 async `tea.Cmd` + goroutine で展開し、抽出前に `Extracting ...`、完了後に `done: N entries` をコンソールに表示。
 
-### 9. 起動時入力ソース制御
+### 10. 起動時入力ソース制御
 
 macOS のみ、`osascript` で System Events を通じてフォアグラウンドアプリの入力ソースを English に設定。
 アクセシビリティ許可が必要（初回のみダイアログ表示）。`input_darwin.go` のビルドタグ `//go:build darwin` で分離。
@@ -256,8 +259,6 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 
 ### リネームモード
 
-### リネームモード
-
 `r` キーで起動。リネームダイアログが画面内にインライン表示される。
 
 | キー | 機能 |
@@ -315,7 +316,7 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 
 - 先頭アイコン: 📁 ディレクトリ、🔗 シンボリックリンク、なし 通常ファイル
 - パーミッション: 10桁（d/-/l + rwxrwxrwx）、setuid/setgid/sticky対応
-- **所有者** と **グループ**: uid/gid からユーザ名に変換、8桁右寄せ（lookupUser/lookupGroup でキャッシュ）
+- **所有者** と **グループ**: uid/gid からユーザ名に変換、8桁左寄せ（lookupUser/lookupGroup でキャッシュ）
 - ファイル名: ペイン幅に合わせて動的トランケート（`…`）
 - サイズ: B/K/M/G 単位、右寄せ8桁固定
 
@@ -333,7 +334,7 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 
 ### ソート
 
-sr キーで循環: 名前 → 日時 → 拡張子 → サイズ → (戻る)
+`R` キーで循環: 名前 → 日時 → 拡張子 → サイズ → (戻る)
 各モードで大文字小文字を区別しないアルファベット順。ディレクトリは先頭にグループ化。
 
 ---
@@ -360,7 +361,6 @@ sr キーで循環: 名前 → 日時 → 拡張子 → サイズ → (戻る)
 | グラフィックビューア | gvon.s (4,864行) | ターミナル.app未対応。iTerm2移行時に検討 |
 | 音楽プレイヤー | music.s (1,045行) | 実装しない。config.yaml の拡張子マッピングで代替 |
 | バッチリネーム | rename.s | 実装しない（一括操作による事故リスク） |
-| ナンバー表示 | look.s 一部 | 行番号表示のオプション |
 
 ### v2.2.0 で追加済み
 
@@ -410,9 +410,9 @@ golangci-lint run ./src/...
 
 ```bash
 # Linux
-GOOS=linux GOARCH=amd64 go build -o skittles-linux .
-# Windows
-GOOS=windows GOARCH=amd64 go build -o skittles.exe .
+GOOS=linux GOARCH=amd64 go build -o skittles-linux ./src
+# Windows（※注: owner/group 表示が Unix 依存のため未対応）
+# GOOS=windows GOARCH=amd64 go build -o skittles.exe ./src
 ```
 
 ### インストール
@@ -431,9 +431,9 @@ git clone ... && cd skittles && go build -o skittles . && ./skittles
 |----|--------|------|------|
 | macOS | ✅ | ✅ | 入力ソース切替は osascript（アクセシビリティ許可が必要） |
 | Linux | ✅ | ✅（未検証） | 入力ソース切替は no-op。`xdg-open` は未統合 |
-| Windows | ✅ | ✅（未検証） | `go install` 対応。コンソール制御は bubbletea 内蔵 |
+| Windows | ❌ | ❌ | `syscall.Stat_t` 非対応によりビルド不可 |
 
-プラットフォーム依存は `input_darwin.go` / `input_other.go` のビルドタグ分離のみ。残りは純 Go 標準ライブラリ + bubbletea + lipgloss + chroma/glamour で全プラットフォーム同一コード。
+プラットフォーム依存は `input_darwin.go` / `input_other.go` および `open_darwin.go` / `open_linux.go` / `open_windows.go` のビルドタグ分離のみ。
 
 ---
 
@@ -477,8 +477,8 @@ git clone ... && cd skittles && go build -o skittles . && ./skittles
 | **Go** | シングルバイナリ、標準ライブラリだけでファイルI/O/プロセス実行が完結、クロスコンパイル容易 |
 | **bubbletea** | Elm アーキテクチャ（Model/Update/View）、3ペインのフォーカス管理に適合 |
 | **lipgloss** | スタイルの関数型合成、アクティブ/非アクティブの条件分岐 |
-| **glamour** | 同上エコシステム、Go製Markdown→ANSIレンダラ。コードブロックは内部でchromaを使用 |
-| **chroma** | Go製シンタックスハイライター、多数の言語・テーマ対応 |
+| **glamour** | Go製Markdown→ANSIレンダラ。コードブロックは内部でchromaを使用 |
+| **chroma** | Go製シンタックスハイライター、多数の言語・テーマ対応（dracula） |
 | **YAML設定** | 人間可読、コメント可能、`gopkg.in/yaml.v3` でパース |
 
 ---
