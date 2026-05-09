@@ -3,7 +3,9 @@ package ui
 import (
 	"bufio"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -13,6 +15,7 @@ type Console struct {
 	Output     []string
 	Input      []rune
 	Cursor     int
+	Dir        string
 	History    []string
 	HistoryPos int
 	Scroll     int
@@ -23,9 +26,11 @@ type Console struct {
 }
 
 func NewConsole(width, height int) *Console {
+	dir, _ := os.Getwd()
 	return &Console{
 		Width:  width,
 		Height: height,
+		Dir:    dir,
 	}
 }
 
@@ -33,21 +38,43 @@ func (c *Console) Exec(cmdLine string) {
 	c.History = append(c.History, cmdLine)
 	c.HistoryPos = len(c.History)
 
-	c.AddOutput(fmt.Sprintf("> %s", cmdLine))
-
-	outputCh := make(chan string, 100)
-	c.outputCh = outputCh
+	c.AddOutput(fmt.Sprintf("$ %s", cmdLine))
 
 	parts := strings.Fields(cmdLine)
 	if len(parts) == 0 {
-		close(outputCh)
 		return
 	}
+
+	// handle cd builtin
+	if parts[0] == "cd" {
+		target := c.Dir
+		if len(parts) >= 2 {
+			if parts[1] == "-" {
+			} else if strings.HasPrefix(parts[1], "/") {
+				target = parts[1]
+			} else {
+				target = c.Dir + "/" + parts[1]
+			}
+		} else {
+			target, _ = os.UserHomeDir()
+		}
+		target = filepath.Clean(target)
+		if fi, err := os.Stat(target); err == nil && fi.IsDir() {
+			c.Dir = target
+		} else if len(parts) >= 2 {
+			c.AddOutput(fmt.Sprintf("cd: %s: No such directory", parts[1]))
+		}
+		return
+	}
+
+	outputCh := make(chan string, 100)
+	c.outputCh = outputCh
 
 	go func() {
 		defer close(outputCh)
 
 		cmd := exec.Command(parts[0], parts[1:]...)
+		cmd.Dir = c.Dir
 
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
@@ -123,9 +150,12 @@ func (c *Console) RenderBody() string {
 		body.WriteString(strings.Repeat(" ", w) + "\n")
 	}
 
-	prompt := fmt.Sprintf(" > %s", string(c.Input))
+	prompt := fmt.Sprintf(" %s $ %s", c.Dir, string(c.Input))
 	if len(prompt) > w {
-		prompt = prompt[:w]
+		prompt = " $ " + string(c.Input)
+		if len(prompt) > w {
+			prompt = prompt[:w]
+		}
 	}
 	body.WriteString(prompt)
 	return body.String()
