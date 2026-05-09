@@ -195,11 +195,11 @@ func (m *Model) renderWithFilter(topBar string) string {
 		cursor = "█"
 	}
 	current := string(m.filterInput) + cursor
-	prompt := "Filter pattern (glob, empty=clear):"
+	prompt := "Filter pattern (glob):"
 	if m.filterInput == nil {
 		current = cursor
 	}
-	content := fmt.Sprintf("\n%s\n\n  %s\n", prompt, current)
+	content := fmt.Sprintf("\n%s\n\n  %s\n\nEnter=apply  ESC=cancel\n空入力+Enterで解除\n", prompt, current)
 	dialog := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).

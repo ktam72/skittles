@@ -205,7 +205,7 @@ func (p *Pane) SelectedEntries() []fs.Entry {
 func (p *Pane) RenderHeader() string {
 	dir := p.Dir
 	if p.Filter != "" {
-		dir += fmt.Sprintf(" [Filter: %s]", p.Filter)
+		dir += fmt.Sprintf(" [Filter: %s, Fで解除]", p.Filter)
 	}
 	if len(dir) > p.Width-2 {
 		dir = "..." + dir[len(dir)-(p.Width-5):]
