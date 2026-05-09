@@ -14,7 +14,6 @@ import (
 
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/quick"
-	"github.com/charmbracelet/glamour"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -29,19 +28,19 @@ const (
 )
 
 type Model struct {
-	Left       *Pane
-	Right      *Pane
-	Console    *Console
-	Focus      int
-	Width      int
-	Height     int
-	now        time.Time
-	mode       Mode
-	reg        *actions.Registry
-	viewer     string
-	viewerBuf  []string
-	viewerOff  int
-	err        error
+	Left      *Pane
+	Right     *Pane
+	Console   *Console
+	Focus     int
+	Width     int
+	Height    int
+	now       time.Time
+	mode      Mode
+	reg       *actions.Registry
+	viewer    string
+	viewerBuf []string
+	viewerOff int
+	err       error
 }
 
 const (
@@ -127,6 +126,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Console.Width = msg.Width - 2
 		m.Console.Height = consoleHeight
 
+	case consoleOutputMsg:
+		m.Console.AddOutput(string(msg))
+		return m, consoleOutputCmd(m.Console.outputCh)
+
 	case tea.KeyMsg:
 		switch m.mode {
 		case ModeQuit:
@@ -182,6 +185,20 @@ func (m *Model) handleViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.viewerOff > maxOff {
 			m.viewerOff = maxOff
 		}
+	case tea.KeyLeft:
+		m.viewerOff -= m.Height - 2
+		if m.viewerOff < 0 {
+			m.viewerOff = 0
+		}
+	case tea.KeyRight:
+		m.viewerOff += m.Height - 2
+		maxOff := len(m.viewerBuf) - m.Height + 2
+		if maxOff < 0 {
+			maxOff = 0
+		}
+		if m.viewerOff > maxOff {
+			m.viewerOff = maxOff
+		}
 	}
 	return m, nil
 }
@@ -197,12 +214,9 @@ func (m *Model) loadViewerBuffer() {
 	ext := strings.ToLower(filepath.Ext(m.viewer))
 
 	if ext == ".md" {
-		rendered, err := glamour.Render(text, "dark")
-		if err == nil {
-			m.viewerBuf = strings.Split(rendered, "\n")
-			m.viewerOff = 0
-			return
-		}
+		m.viewerBuf = strings.Split(renderMarkdown(text), "\n")
+		m.viewerOff = 0
+		return
 	}
 
 	var buf bytes.Buffer
@@ -235,6 +249,7 @@ func (m *Model) handleConsoleMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.Console.ClearInput()
 		if cmd != "" {
 			m.Console.Exec(cmd)
+			return m, consoleOutputCmd(m.Console.outputCh)
 		}
 
 	case tea.KeyBackspace:
@@ -312,38 +327,6 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "end", "G":
 		p.End()
 
-	case "right", "l":
-		cur := p.Current()
-		if cur == nil {
-			return m, nil
-		}
-		if cur.IsDir {
-			abs, _ := filepath.Abs(cur.Path)
-			_ = p.Chdir(abs)
-		} else {
-			act := m.reg.Resolve(cur.Path)
-			if act.Look {
-				m.viewer = cur.Path
-				m.loadViewerBuffer()
-				m.mode = ModeView
-			} else if act.Command != "" {
-				out := m.runAction(act, cur.Path)
-				if out != "" {
-					m.Console.AddOutput(out)
-				}
-			} else if isExecutable(cur) {
-				editor := os.Getenv("EDITOR")
-				if editor == "" {
-					editor = "vim"
-				}
-				m.runAction(actions.Action{Command: fmt.Sprintf("%s $P", editor)}, cur.Path)
-			} else {
-				m.viewer = cur.Path
-				m.loadViewerBuffer()
-				m.mode = ModeView
-			}
-		}
-
 	case "enter":
 		cur := p.Current()
 		if cur == nil {
@@ -364,11 +347,13 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					m.Console.AddOutput(out)
 				}
 			} else if isExecutable(cur) {
-				editor := os.Getenv("EDITOR")
-				if editor == "" {
-					editor = "vim"
-				}
-				m.runAction(actions.Action{Command: fmt.Sprintf("%s $P", editor)}, cur.Path)
+				m.Console.ClearInput()
+				m.Console.Input = []rune(cur.Path)
+				m.Console.Cursor = len(cur.Path)
+				m.Focus = focusConsole
+				m.Left.Active = false
+				m.Right.Active = false
+				m.Console.Active = true
 			} else {
 				m.viewer = cur.Path
 				m.loadViewerBuffer()
@@ -427,6 +412,11 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "a":
 		p.MarkAll()
+	case "p":
+		cur := p.Current()
+		if cur != nil && !cur.IsDir {
+			_ = exec.Command("open", cur.Path).Run()
+		}
 	case "r":
 		p.Reload()
 
@@ -488,4 +478,14 @@ func (m *Model) runAction(act actions.Action, path string) string {
 
 func isExecutable(e *fs.Entry) bool {
 	return e.Mode&0100 != 0
+}
+
+func consoleOutputCmd(ch chan string) tea.Cmd {
+	return func() tea.Msg {
+		line, ok := <-ch
+		if !ok {
+			return nil
+		}
+		return consoleOutputMsg(line)
+	}
 }

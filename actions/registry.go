@@ -205,6 +205,12 @@ var extActions = map[string]Action{
 	".toml": {Look: true},
 	".conf": {Look: true},
 	".log":  {Look: true},
+	".png":  {Command: "open $P"},
+	".jpg":  {Command: "open $P"},
+	".jpeg": {Command: "open $P"},
+	".gif":  {Command: "open $P"},
+	".bmp":  {Command: "open $P"},
+	".webp": {Command: "open $P"},
 	".mdx":  {Command: "open -a MP4M.app $P"},
 	".lzh":  {Command: "lha x $P"},
 	".zip":  {Command: "unzip -o $P"},
@@ -230,7 +236,6 @@ func DefaultRegistry() *Registry {
 		r.AddExt(ext_, act)
 	}
 
-	r.SetDefault(Action{Command: "$EDITOR $P"})
 	return r
 }
 

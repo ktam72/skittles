@@ -1,11 +1,13 @@
 package ui
 
 import (
-	"bytes"
+	"bufio"
 	"fmt"
 	"os/exec"
 	"strings"
 )
+
+type consoleOutputMsg string
 
 type Console struct {
 	Output     []string
@@ -17,6 +19,7 @@ type Console struct {
 	Active     bool
 	Width      int
 	Height     int
+	outputCh   chan string
 }
 
 func NewConsole(width, height int) *Console {
@@ -32,22 +35,53 @@ func (c *Console) Exec(cmdLine string) {
 
 	c.AddOutput(fmt.Sprintf("> %s", cmdLine))
 
+	outputCh := make(chan string, 100)
+	c.outputCh = outputCh
+
 	parts := strings.Fields(cmdLine)
 	if len(parts) == 0 {
+		close(outputCh)
 		return
 	}
 
-	cmd := exec.Command(parts[0], parts[1:]...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-	if err := cmd.Run(); err != nil {
-		c.AddOutput(fmt.Sprintf("error: %v", err))
-	}
-	lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")
-	for _, line := range lines {
-		c.AddOutput(line)
-	}
+	go func() {
+		defer close(outputCh)
+
+		cmd := exec.Command(parts[0], parts[1:]...)
+
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			outputCh <- fmt.Sprintf("error: %v", err)
+			return
+		}
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			outputCh <- fmt.Sprintf("error: %v", err)
+			return
+		}
+
+		if err := cmd.Start(); err != nil {
+			outputCh <- fmt.Sprintf("error: %v", err)
+			return
+		}
+
+		done := make(chan struct{})
+		go func() {
+			sc := bufio.NewScanner(stdout)
+			for sc.Scan() {
+				outputCh <- sc.Text()
+			}
+			close(done)
+		}()
+
+		scErr := bufio.NewScanner(stderr)
+		for scErr.Scan() {
+			outputCh <- scErr.Text()
+		}
+
+		<-done
+		_ = cmd.Wait()
+	}()
 }
 
 func (c *Console) AddOutput(line string) {

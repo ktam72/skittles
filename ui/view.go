@@ -103,7 +103,7 @@ func (m *Model) renderTopBar() string {
 		padding = 1
 	}
 	bar := left + strings.Repeat(" ", padding) + right
-	return topBarStyle.Width(m.Width).Render(bar)
+	return topBarStyle.Render(bar)
 }
 
 func (m *Model) renderPane(p *Pane, active bool) string {
@@ -167,7 +167,7 @@ func (m *Model) styleRow(r RowInfo, paneWidth int) string {
 func (m *Model) renderBindings() string {
 	hints := []string{
 		"↑↓:nav", "Enter:open", "Tab:focus(3-pane)",
-		"c:copy", "m:move", "d:del", "a:mark all",
+		"c:copy", "m:move", "d:del", "a:mark all", "p:preview",
 		"ESC×2:quit",
 	}
 	return hintStyle.Render(strings.Join(hints, "  |  "))

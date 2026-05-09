@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/ktam/skittles/fs"
@@ -206,26 +207,84 @@ func (p *Pane) RenderRows() []RowInfo {
 }
 
 func (p *Pane) formatEntryLine(e *fs.Entry) string {
-	icon := " "
+	icon := "  "
 	if e.IsDir {
 		icon = "📁"
 	}
 	if e.IsLink {
 		icon = "🔗"
 	}
+
+	perm := formatPerm(e.Mode)
 	size := ""
 	if !e.IsDir {
 		size = formatSize(e.Size)
 	}
+
+	fixed := len(icon) + 1 + 10 + 1 + 1 + 8
+	nameWidth := p.Width - fixed
+	if nameWidth < 3 {
+		nameWidth = 3
+	}
+
 	name := e.Name
-	if len(name) > p.Width-12 {
-		name = name[:p.Width-13] + "…"
+	if len(name) > nameWidth {
+		name = name[:nameWidth-1] + "…"
 	}
-	line := fmt.Sprintf(" %s %-*s %8s", icon, p.Width-14, name, size)
-	if len(line) > p.Width {
-		line = line[:p.Width]
+
+	return fmt.Sprintf("%s %s %-*s %8s", icon, perm, nameWidth, name, size)
+}
+
+func formatPerm(mode os.FileMode) string {
+	var b [10]byte
+	if mode.IsDir() {
+		b[0] = 'd'
+	} else if mode&os.ModeSymlink != 0 {
+		b[0] = 'l'
+	} else {
+		b[0] = '-'
 	}
-	return line
+
+	perm := []struct {
+		bit  os.FileMode
+		char byte
+	}{
+		{0400, 'r'}, {0200, 'w'}, {0100, 'x'},
+		{0040, 'r'}, {0020, 'w'}, {0010, 'x'},
+		{0004, 'r'}, {0002, 'w'}, {0001, 'x'},
+	}
+
+	for i, p := range perm {
+		if mode&p.bit != 0 {
+			b[i+1] = p.char
+		} else {
+			b[i+1] = '-'
+		}
+	}
+
+	if mode&os.ModeSetuid != 0 {
+		if b[3] == 'x' {
+			b[3] = 's'
+		} else {
+			b[3] = 'S'
+		}
+	}
+	if mode&os.ModeSetgid != 0 {
+		if b[6] == 'x' {
+			b[6] = 's'
+		} else {
+			b[6] = 'S'
+		}
+	}
+	if mode&os.ModeSticky != 0 {
+		if b[9] == 'x' {
+			b[9] = 't'
+		} else {
+			b[9] = 'T'
+		}
+	}
+
+	return string(b[:])
 }
 
 func formatSize(n int64) string {
@@ -237,6 +296,6 @@ func formatSize(n int64) string {
 	case n >= 1<<10:
 		return fmt.Sprintf("%.1fK", float64(n)/(1<<10))
 	default:
-		return fmt.Sprintf("%dB", n)
+		return fmt.Sprintf("%d", n)
 	}
 }

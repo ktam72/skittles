@@ -25,9 +25,10 @@ main.go                  ← エントリポイント、tea.NewProgram
 
 ui/
   ├─ model.go            ← Elm Model/Update（全状態管理・イベントディスパッチ）
-  ├─ pane.go             ← ファイルペイン（カーソル/マーク/ソート/表示）
-  ├─ console.go          ← コンソールペイン（出力バッファ/コマンド履歴/入力）
-  └─ view.go             ← lipgloss レンダリング、3ペインレイアウト
+  ├─ pane.go             ← ファイルペイン（カーソル/マーク/ソート/表示、パーミッション表示）
+  ├─ console.go          ← コンソールペイン（出力バッファ/コマンド履歴/入力、リアルタイム出力）
+  ├─ mdrender.go         ← Markdown レンダリング（glamour + プレーンテキストフォールバック）
+  └─ view.go             ← lipgloss レンダリング、3ペインレイアウト、トップバー
 
 fs/
   ├─ entry.go            ← ファイルエントリ、ディレクトリ一覧、ソート
@@ -113,6 +114,7 @@ Skittles v0.1.0                                2026/05/09 12:34:56
 ### 4. コンソールペイン
 
 - コマンド実行結果を出力バッファに蓄積（スクロール可能）
+- **リアルタイム出力**: `bufio.Scanner` + goroutine + `chan string` でコマンドのstdout/stderrを逐次表示
 - コマンド履歴対応（↑↓で呼び出し）
 - ファイルペインで `!` 押下でコンソールに直接ジャンプ
 - ESC でファイルペインに復帰
@@ -124,17 +126,26 @@ Skittles v0.1.0                                2026/05/09 12:34:56
 
 | ファイル種別 | レンダリングエンジン | テーマ |
 |-------------|-------------------|--------|
-| `.md` | glamour（Markdown） | dark |
+| `.md` | glamour + プレーンフォールバック | dark |
 | ソースコード全般 | chroma（シンタックスハイライト） | dracula |
 | その他テキスト | プレーンテキスト | 白文字 |
+
+Markdown は `ui/mdrender.go` でレンダリング。最初に `glamour.Render`（ANSI色付き）を試行し、
+失敗した場合は `renderMarkdownPlain`（簡易パーサー、ANSI不使用）にフォールバック。
 
 **言語検出**: `lexers.Match()` で拡張子＋ファイル名から自動判定。Swift/C/C++/.h 等もカバー。
 
 **ソースコード対応拡張子**: .go, .rs, .py, .js, .ts, .c, .h, .cpp, .hpp, .java, .swift, .rb, .sh, .yaml/.yml, .json, .xml, .toml 等。
 
-スクロール対応: ↑↓/PgUp/PgDown、ESC で終了。
+スクロール対応: ↑↓/PgUp/PgDown/←(ROLLUP)/→(ROLLDOWN)、ESC で終了。
 
-### 6. 起動時入力ソース制御
+### 6. パーミッション表示
+
+各行に `drwxr-xr-x` 形式のパーミッションを表示（`pane.go` `formatPerm()`）。
+- 先頭文字: `d`(ディレクトリ) / `l`(シンボリックリンク) / `-`(通常ファイル)
+- setuid/setgid/sticky ビットにも対応（`s`/`S`/`t`/`T`）
+
+### 7. 起動時入力ソース制御
 
 macOS のみ、`osascript` で System Events を通じてフォアグラウンドアプリの入力ソースを English に設定。
 アクセシビリティ許可が必要（初回のみダイアログ表示）。`input_darwin.go` のビルドタグ `//go:build darwin` で分離。
@@ -153,12 +164,12 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 | PgDown / Space | 1ページ下 |
 | Home / g | 先頭へ |
 | End / G | 末尾へ |
-| → / l | ディレクトリ進入 / アクション実行（Look→ビューア、Command→実行） |
-| Enter | → / l と同じ |
+| Enter | ディレクトリ進入 / アクション実行 |
 | ← / h | 親ディレクトリへ |
 | Tab | フォーカス切替（Left→Right→Console→Left） |
 | Backspace | カーソル行をマーク/マーク解除して次の行へ |
 | a | 全ファイルマーク |
+| **p** | **外部アプリでプレビュー（`open` コマンド）** |
 | c | 選択エントリを反対ペインへコピー |
 | m | 選択エントリを反対ペインへ移動 |
 | d | 選択エントリを削除 |
@@ -167,6 +178,9 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 | E | エディタで開く（$EDITOR） |
 | ! | コンソールペインへジャンプ（コマンド入力モード） |
 | ESC | 終了確認 |
+
+**注意**: `→` / `l` キーはブラウズモードでは無効。ファイルオープンは `Enter` に一本化。
+実行ファイルで `Enter` → コンソールにフォーカス移動 + パス入力済み状態にする。ユーザーが `Enter` で実行するか編集してから実行する。
 
 ### コンソールモード
 
@@ -186,6 +200,8 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 |------|------|
 | ↑ | 1行上スクロール |
 | ↓ | 1行下スクロール |
+| ← | 1ページ上（ROLLUP） |
+| → | 1ページ下（ROLLDOWN） |
 | PgUp | 1ページ上 |
 | PgDown | 1ページ下 |
 | ESC | ビューア終了、ファイルペイン復帰 (tea.ClearScreen 発行) |
@@ -205,14 +221,15 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 ### 各行の表示要素
 
 ```
-📁 dirname             1.2K
-📄 filename.ext         340B
-🔗 linkname              52B
+📁 drwxr-xr-x Documents                        4.0K
+📄 -rw-r--r-- main.go                          1.2K
+🔗 lrwxr-xr-x link                              52B
 ```
 
 - 先頭アイコン: 📁 ディレクトリ、🔗 シンボリックリンク、なし 通常ファイル
-- ファイル名: ペイン幅に合わせてトランケート（`…`）
-- サイズ: B/K/M/G 単位で表示（ディレクトリは非表示）
+- パーミッション: 10桁（d/-/l + rwxrwxrwx）、setuid/setgid/sticky対応
+- ファイル名: ペイン幅に合わせて動的トランケート（`…`）
+- サイズ: B/K/M/G 単位、右寄せ8桁固定
 
 ### ハイライト
 
@@ -342,12 +359,13 @@ mint.x の独自価値は「2画面による暗黙コンテキスト」にあり
 ## 開発ロードマップ
 
 ```
-Phase 1 ─ 基本2画面 + ファイル操作           ✅ 完了 (1,243行)
+Phase 1 ─ 基本2画面 + ファイル操作           ✅ 完了
 Phase 2 ─ コンソールペイン + マーク           ✅ 完了
 Phase 3 ─ ビューア（Markdown/HL/スクロール）   ✅ 完了
-Phase 4 ─ リファクタリング・設定外部化         🔄 現在
-Phase 5 ─ インクリメンタルサーチ              ⬜ 未着手
-Phase 6 ─ クロスプラットフォーム検証           ⬜ 未着手
-Phase 7 ─ Homebrew Formula / 配布             ⬜ 未着手
-Phase 8 ─ プラグインシステム                  ⬜ 未着手
+Phase 4 ─ リアルタイム出力・パーミッション表示 ✅ 完了
+Phase 5 ─ リファクタリング・Lint 0 issues    ✅ 完了
+Phase 6 ─ インクリメンタルサーチ              ⬜ 未着手
+Phase 7 ─ クロスプラットフォーム検証           ⬜ 未着手
+Phase 8 ─ Homebrew Formula / 配布             ⬜ 未着手
+Phase 9 ─ プラグインシステム                  ⬜ 未着手
 ```
