@@ -81,7 +81,7 @@ func (r *Registry) Resolve(path string) Action {
 	if err != nil {
 		return Action{}
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	data := make([]byte, 256)
 	n, _ := f.Read(data)
@@ -136,7 +136,7 @@ func IsBinary(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	buf := make([]byte, 512)
 	n, _ := f.Read(buf)
 	for i := 0; i < n; i++ {
@@ -215,7 +215,7 @@ var extActions = map[string]Action{
 	".7z":   {Command: "7z x $P"},
 }
 
-func DefaultRegistry(editor string) *Registry {
+func DefaultRegistry() *Registry {
 	r := NewRegistry()
 
 	for _, m := range magicPatterns {
@@ -230,7 +230,7 @@ func DefaultRegistry(editor string) *Registry {
 		r.AddExt(ext_, act)
 	}
 
-	r.SetDefault(Action{Command: fmt.Sprintf("%s $P", editor)})
+	r.SetDefault(Action{Command: "$EDITOR $P"})
 	return r
 }
 

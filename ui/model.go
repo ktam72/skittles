@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/ktam/skittles/actions"
 	"github.com/ktam/skittles/fs"
@@ -16,6 +17,8 @@ import (
 	"github.com/charmbracelet/glamour"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+const version = "0.1.0"
 
 type Mode int
 
@@ -32,6 +35,7 @@ type Model struct {
 	Focus      int
 	Width      int
 	Height     int
+	now        time.Time
 	mode       Mode
 	reg        *actions.Registry
 	viewer     string
@@ -51,7 +55,7 @@ const consoleHeight = 8
 func NewModel(leftDir, rightDir string) *Model {
 	w, h := 120, 40
 	paneW := w/2 - 2
-	paneH := h - consoleHeight - 8
+	paneH := h - consoleHeight - 9
 
 	if leftDir == "" {
 		leftDir, _ = os.Getwd()
@@ -67,15 +71,18 @@ func NewModel(leftDir, rightDir string) *Model {
 		Focus:   focusLeft,
 		Width:   w,
 		Height:  h,
+		now:     time.Now(),
 		mode:    ModeBrowse,
-		reg:     actions.DefaultRegistry(os.Getenv("EDITOR")),
+		reg:     actions.DefaultRegistry(),
 	}
 	m.Left.Active = true
 	return m
 }
 
 func (m *Model) Init() tea.Cmd {
-	return nil
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return t
+	})
 }
 
 func (m *Model) FocusedPane() *Pane {
@@ -102,11 +109,17 @@ func (m *Model) OppPane() *Pane {
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case time.Time:
+		m.now = msg
+		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg {
+			return t
+		})
+
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
 		m.Height = msg.Height
 		paneW := msg.Width/2 - 2
-		paneH := msg.Height - consoleHeight - 8
+		paneH := msg.Height - consoleHeight - 9
 		m.Left.Width = paneW
 		m.Left.Height = paneH
 		m.Right.Width = paneW
@@ -306,29 +319,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		if cur.IsDir {
 			abs, _ := filepath.Abs(cur.Path)
-			p.Chdir(abs)
-		} else {
-			act := m.reg.Resolve(cur.Path)
-			if act.Look {
-				m.viewer = cur.Path
-				m.loadViewerBuffer()
-				m.mode = ModeView
-			} else {
-				out := m.runAction(act, cur.Path)
-				if out != "" {
-					m.Console.AddOutput(out)
-				}
-			}
-		}
-
-	case "enter":
-		cur := p.Current()
-		if cur == nil {
-			return m, nil
-		}
-		if cur.IsDir {
-			abs, _ := filepath.Abs(cur.Path)
-			p.Chdir(abs)
+			_ = p.Chdir(abs)
 		} else {
 			act := m.reg.Resolve(cur.Path)
 			if act.Look {
@@ -340,19 +331,55 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				if out != "" {
 					m.Console.AddOutput(out)
 				}
-			} else {
+			} else if isExecutable(cur) {
 				editor := os.Getenv("EDITOR")
 				if editor == "" {
 					editor = "vim"
 				}
 				m.runAction(actions.Action{Command: fmt.Sprintf("%s $P", editor)}, cur.Path)
+			} else {
+				m.viewer = cur.Path
+				m.loadViewerBuffer()
+				m.mode = ModeView
+			}
+		}
+
+	case "enter":
+		cur := p.Current()
+		if cur == nil {
+			return m, nil
+		}
+		if cur.IsDir {
+			abs, _ := filepath.Abs(cur.Path)
+			_ = p.Chdir(abs)
+		} else {
+			act := m.reg.Resolve(cur.Path)
+			if act.Look {
+				m.viewer = cur.Path
+				m.loadViewerBuffer()
+				m.mode = ModeView
+			} else if act.Command != "" {
+				out := m.runAction(act, cur.Path)
+				if out != "" {
+					m.Console.AddOutput(out)
+				}
+			} else if isExecutable(cur) {
+				editor := os.Getenv("EDITOR")
+				if editor == "" {
+					editor = "vim"
+				}
+				m.runAction(actions.Action{Command: fmt.Sprintf("%s $P", editor)}, cur.Path)
+			} else {
+				m.viewer = cur.Path
+				m.loadViewerBuffer()
+				m.mode = ModeView
 			}
 		}
 
 	case "left", "h":
 		if p.Dir != "/" {
 			parent := filepath.Dir(strings.TrimRight(p.Dir, "/"))
-			p.Chdir(parent)
+			_ = p.Chdir(parent)
 		}
 
 	case "tab":
@@ -392,7 +419,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		entries := p.SelectedEntries()
 		if len(entries) > 0 {
 			for _, e := range entries {
-				fs.Delete(e.Path)
+				_ = fs.Delete(e.Path)
 			}
 			p.ClearMarks()
 			p.Reload()
@@ -459,6 +486,6 @@ func (m *Model) runAction(act actions.Action, path string) string {
 	return string(out)
 }
 
-func terminalSize() (int, int) {
-	return 80, 24
+func isExecutable(e *fs.Entry) bool {
+	return e.Mode&0100 != 0
 }

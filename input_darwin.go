@@ -5,7 +5,7 @@ package main
 import "os/exec"
 
 func switchToEnglishInput() {
-	exec.Command("osascript", "-e",
+	_ = exec.Command("osascript", "-e",
 		`tell application "System Events" to tell first process where frontmost is true to set input source to language code "en"`,
 	).Run()
 }

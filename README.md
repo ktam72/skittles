@@ -4,7 +4,8 @@ X68000 用ファイラー [mint.x](https://opencode.ai) の設計思想を継承
 モダンな 2画面 TUI ファイルマネージャ。
 
 ```
-┌─ Left Pane ────────┬─ Right Pane ───────┐
+┌─ Skittles v0.1.0 ─────────── 2026/05/09 12:34:56 ─┐
+├─ Left Pane ────────┬─ Right Pane ───────┐
 │  📁 Documents       │  📁 Downloads       │
 │  📄 report.pdf      │  📄 image.png       │
 │  📄 main.go         │  📄 data.json       │
@@ -20,11 +21,12 @@ X68000 用ファイラー [mint.x](https://opencode.ai) の設計思想を継承
 
 - **2画面 + コンソール の3ペイン**: Tab でフォーカス切替、アクティブペインが source、反対が destination
 - **ファイル操作**: コピー/移動/削除/マーク/ソート
-- **ビルトインビューア**: テキスト・Markdown・ソースコードのシンタックスハイライト対応（スクロール可能）
+- **ビルトインビューア**: テキスト・Markdown・ソースコードのシンタックスハイライト対応（スクロール可能）。**実行ビットなしファイルは自動でビューア表示**
 - **拡張子→アクション**: `.go` → ビューア、`.zip` → unzip、`.mdx` → MP4M.app 等、`config.yaml` でカスタマイズ可能
 - **コンソールペイン**: シェルコマンドの実行と出力表示、コマンド履歴
 - **クロスプラットフォーム**: macOS / Linux / Windows（シングルバイナリ）
 - **日本語入力対応**: macOS 起動時に自動で英数入力に切替
+- **トップバー**: アプリ名・バージョン・リアルタイム時計表示
 
 ## インストール
 
@@ -107,8 +109,9 @@ actions:
 ## 開発
 
 ```bash
-go build -o skittles .    # ビルド
-go vet ./...               # 静的解析
+go build -o skittles .              # ビルド
+go vet ./...                         # 静的解析
+golangci-lint run ./...              # Lint（0 issues）
 
 # クロスコンパイル
 GOOS=linux GOARCH=amd64 go build -o skittles-linux .

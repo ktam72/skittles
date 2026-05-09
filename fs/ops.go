@@ -15,13 +15,13 @@ func CopyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	_, err = io.Copy(out, in)
 	return err
@@ -97,7 +97,7 @@ func MoveEntries(srcDir string, entries []Entry, dstDir string) (int, error) {
 			if err := CopyFile(e.Path, filepath.Join(dstDir, e.Name)); err != nil {
 				return count, err
 			}
-			os.Remove(e.Path)
+			_ = os.Remove(e.Path)
 		}
 		count++
 	}

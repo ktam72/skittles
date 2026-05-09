@@ -65,10 +65,20 @@ DESIGN.md                ← 設計ドキュメント（本ファイル）
 
 Tab キーで Left → Right → Console → Left と巡回。アクティブペインは青色ボーダー、非アクティブは灰色。
 
-レイアウト計算式（h = ターミナル高さ）:
-- ファイルペインの内容高さ: `h - consoleHeight - 8`
-- コンソールペインの高さ: `consoleHeight`（= 8）
-- 残り: 枠線 (2+2) + セパレータ(1) + ヒント行(1) = 8
+レイアウト計算式（h = ターミナルの行数）:
+- トップバー: 1行
+- ファイルペインの内容高さ: `h - consoleHeight - 9`
+- コンソールペインの内容高さ: `consoleHeight`（= 8）
+- 残り: 枠線 (2+2) + セパレータ(1) + ヒント行(1) = 9
+
+### 7. トップバー
+
+画面上端に常時表示。アプリ名 `Skittles v0.1.0`（左）と現在日時（右）を太字・紺背景で表示。
+時計は `tea.Tick(time.Second)` による定期購読で1秒ごとに更新。
+
+```
+Skittles v0.1.0                                2026/05/09 12:34:56
+```
 
 ### 2. 暗黙の source/destination コンテキスト
 
@@ -92,7 +102,11 @@ Tab キーで Left → Right → Console → Left と巡回。アクティブペ
 `actions/registry.go` の `extActions` マップで定義。
 - `{Look: true}` → ビルトインビューアで開く
 - `{Command: "..."}` → 外部コマンド実行 (`$P`, `$F`, `$D`, `$EDITOR` が展開される)
-- 未登録 → `$EDITOR $P` にフォールバック
+- 未登録 → 実行ビットあり → `$EDITOR $P` / 実行ビットなし → **ビルトインビューア**
+
+デフォルトアクションは `"$EDITOR $P"`（リテラル。`runAction` 内で `$EDITOR` が展開される）。
+以前は `fmt.Sprintf("%s $P", editor)` と書いていたため `$EDITOR` 未設定時に空文字が展開され、
+ファイル自体をexecしようとするバグがあった。
 
 `.mdx` は `open -a MP4M.app $P` にマッピング。
 
@@ -256,8 +270,14 @@ sr キーで循環: 名前 → 日時 → 拡張子 → サイズ → (戻る)
 ### ローカルビルド
 
 ```bash
-go build -o skittles .
+go build -o skittles .                  # ビルド
+go vet ./...                             # 静的解析
+golangci-lint run ./...                  # Lint（0 issues 維持）
 ```
+
+### 品質管理
+
+`golangci-lint` で13のチェッカーを常時通過。`errcheck` は全io操作・`Close()`・`Chdir()` 等をカバー。`unused` はデッドコード除去。
 
 ### クロスコンパイル
 

@@ -60,10 +60,17 @@ func (c *Console) RenderHeader() string {
 }
 
 func (c *Console) RenderBody() string {
-	outH := c.Height - 3
-	if outH < 1 {
-		outH = 1
+	bodyH := c.Height - 2
+	if bodyH < 1 {
+		bodyH = 1
 	}
+	outH := bodyH - 1
+	if outH < 0 {
+		outH = 0
+	}
+
+	w := c.Width - 2
+	lineFmt := fmt.Sprintf(" %%-%ds\n", w-1)
 
 	var body strings.Builder
 	start := c.Scroll - outH
@@ -72,19 +79,19 @@ func (c *Console) RenderBody() string {
 	}
 	for i := start; i < len(c.Output) && i < start+outH; i++ {
 		line := c.Output[i]
-		if len(line) > c.Width-2 {
-			line = line[:c.Width-5] + "..."
+		if len(line) > w-2 {
+			line = line[:w-5] + "..."
 		}
-		body.WriteString(fmt.Sprintf(" %-*s\n", c.Width-2, line))
+		fmt.Fprintf(&body, lineFmt, line)
 	}
 	remain := outH - (len(c.Output) - start)
 	for i := 0; i < remain; i++ {
-		body.WriteString(strings.Repeat(" ", c.Width) + "\n")
+		body.WriteString(strings.Repeat(" ", w) + "\n")
 	}
 
 	prompt := fmt.Sprintf(" > %s", string(c.Input))
-	if len(prompt) > c.Width {
-		prompt = prompt[:c.Width]
+	if len(prompt) > w {
+		prompt = prompt[:w]
 	}
 	body.WriteString(prompt)
 	return body.String()

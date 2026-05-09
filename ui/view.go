@@ -8,6 +8,11 @@ import (
 )
 
 var (
+	topBarStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("15")).
+			Background(lipgloss.Color("17")).
+			Bold(true)
+
 	activePaneStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("63")).
@@ -55,10 +60,6 @@ var (
 	linkStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("220"))
 
-	statusStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("15")).
-			Background(lipgloss.Color("236"))
-
 	hintStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("242"))
 )
@@ -71,6 +72,7 @@ func (m *Model) View() string {
 		return m.renderViewer()
 	}
 
+	topBar := m.renderTopBar()
 	left := m.renderPane(m.Left, m.Focus == focusLeft)
 	right := m.renderPane(m.Right, m.Focus == focusRight)
 	top := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
@@ -82,7 +84,7 @@ func (m *Model) View() string {
 
 	bindings := m.renderBindings()
 
-	body := lipgloss.JoinVertical(lipgloss.Left, top, sep, console, bindings)
+	body := lipgloss.JoinVertical(lipgloss.Left, topBar, top, sep, console, bindings)
 
 	if m.err != nil {
 		body = lipgloss.JoinVertical(lipgloss.Left, body,
@@ -91,6 +93,17 @@ func (m *Model) View() string {
 	}
 
 	return body
+}
+
+func (m *Model) renderTopBar() string {
+	left := fmt.Sprintf(" Skittles v%s ", version)
+	right := m.now.Format(" 2006/01/02 15:04:05 ")
+	padding := m.Width - lipgloss.Width(left) - lipgloss.Width(right)
+	if padding < 1 {
+		padding = 1
+	}
+	bar := left + strings.Repeat(" ", padding) + right
+	return topBarStyle.Width(m.Width).Render(bar)
 }
 
 func (m *Model) renderPane(p *Pane, active bool) string {
