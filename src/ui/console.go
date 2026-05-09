@@ -48,6 +48,14 @@ func (c *Console) Exec(cmdLine string) {
 		return
 	}
 
+	// handle clear builtin
+	if parts[0] == "clear" {
+		c.Output = nil
+		c.outputBytes = 0
+		c.Scroll = 0
+		return
+	}
+
 	// handle cd builtin
 	if parts[0] == "cd" {
 		target := c.Dir
