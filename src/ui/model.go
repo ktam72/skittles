@@ -38,7 +38,7 @@ func extractArchiveCmd(src string) tea.Cmd {
 	}
 }
 
-const version = "1.3.1"
+const version = "1.3.2"
 
 type Mode int
 
