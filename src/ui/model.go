@@ -38,7 +38,7 @@ func extractArchiveCmd(src string) tea.Cmd {
 	}
 }
 
-const version = "2.1.0"
+const version = "2.2.0"
 
 type Mode int
 
@@ -276,12 +276,16 @@ func (m *Model) handleRenameMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyEnter:
 		newName := strings.TrimSpace(string(m.renameInput))
 		if newName != "" {
-			dir := filepath.Dir(m.renamePath)
-			newPath := filepath.Join(dir, newName)
-			if err := os.Rename(m.renamePath, newPath); err != nil {
-				m.err = err
+			if !isValidPathSafe(newName) {
+				m.err = fmt.Errorf("ファイル名に / または \\ は使用できません")
+			} else {
+				dir := filepath.Dir(m.renamePath)
+				newPath := filepath.Join(dir, newName)
+				if err := os.Rename(m.renamePath, newPath); err != nil {
+					m.err = err
+				}
+				m.FocusedPane().Reload()
 			}
-			m.FocusedPane().Reload()
 		}
 		m.mode = ModeBrowse
 		m.renameInput = nil
@@ -304,6 +308,12 @@ func (m *Model) handleFilterMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.mode = ModeBrowse
 	case tea.KeyEnter:
 		filter := strings.TrimSpace(string(m.filterInput))
+		if filter != "" && !isSafePattern(filter) {
+			m.err = fmt.Errorf("フィルタパターンに制御文字や空白は使用できません")
+			m.filterInput = nil
+			m.mode = ModeBrowse
+			return m, nil
+		}
 		p := m.FocusedPane()
 		if p != nil {
 			p.Filter = filter
@@ -362,22 +372,18 @@ func (m *Model) handleFileSearchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyEnter:
 		pattern := strings.TrimSpace(string(m.fileSearchPattern))
 		if pattern != "" {
-			p := m.FocusedPane()
-			if p != nil {
-				m.Console.AddOutput(fmt.Sprintf("Searching for %q in %s ...", pattern, p.Dir))
-				results, err := fs.SearchFiles(p.Dir, pattern)
-				if err != nil {
-					m.err = err
-				} else if len(results) == 0 {
-					m.Console.AddOutput("No files found.")
-				} else {
-					m.viewerTitle = fmt.Sprintf("File Search: %s", pattern)
-					m.viewerBuf = results
-					m.viewerOff = 0
-					m.mode = ModeView
-					m.fileSearchPattern = nil
-					return m, nil
-				}
+			if !isSafePattern(pattern) {
+				m.err = fmt.Errorf("検索パターンに制御文字や空白は使用できません")
+			} else {
+				m.Console.ClearInput()
+				cmd := fmt.Sprintf("find . -name %s", pattern)
+				m.Console.Input = []rune(cmd)
+				m.Console.Cursor = len(cmd)
+				m.Focus = focusConsole
+				m.Left.Active = false
+				m.Right.Active = false
+				m.Console.Active = true
+				switchToEnglishInput()
 			}
 		}
 		m.fileSearchPattern = nil
@@ -402,22 +408,18 @@ func (m *Model) handleGrepMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyEnter:
 		pattern := strings.TrimSpace(string(m.grepPattern))
 		if pattern != "" {
-			p := m.FocusedPane()
-			if p != nil {
-				m.Console.AddOutput(fmt.Sprintf("Grepping for %q in %s ...", pattern, p.Dir))
-				results, err := fs.GrepFiles(p.Dir, pattern)
-				if err != nil {
-					m.err = err
-				} else if len(results) == 0 {
-					m.Console.AddOutput("No matches found.")
-				} else {
-					m.viewerTitle = fmt.Sprintf("Grep: %s", pattern)
-					m.viewerBuf = results
-					m.viewerOff = 0
-					m.mode = ModeView
-					m.grepPattern = nil
-					return m, nil
-				}
+			if !isSafePattern(pattern) {
+				m.err = fmt.Errorf("検索パターンに制御文字や空白は使用できません")
+			} else {
+				m.Console.ClearInput()
+				cmd := fmt.Sprintf("grep -rn %s .", pattern)
+				m.Console.Input = []rune(cmd)
+				m.Console.Cursor = len(cmd)
+				m.Focus = focusConsole
+				m.Left.Active = false
+				m.Right.Active = false
+				m.Console.Active = true
+				switchToEnglishInput()
 			}
 		}
 		m.grepPattern = nil
@@ -1155,4 +1157,20 @@ func consoleOutputCmd(ch chan string) tea.Cmd {
 		}
 		return consoleOutputMsg(line)
 	}
+}
+
+func isValidPathSafe(s string) bool {
+	return !strings.ContainsAny(s, "/\\")
+}
+
+func isSafePattern(s string) bool {
+	if s == "" || len(s) > 256 {
+		return false
+	}
+	for _, r := range s {
+		if r <= 0x20 || r == 0x7f {
+			return false
+		}
+	}
+	return true
 }
