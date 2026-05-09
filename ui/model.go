@@ -49,7 +49,7 @@ const (
 	focusConsole
 )
 
-const consoleHeight = 8
+const consoleHeight = 10
 
 func NewModel(leftDir, rightDir string) *Model {
 	w, h := 120, 40
@@ -302,6 +302,7 @@ func (m *Model) cycleFocus() {
 		m.Right.Active = true
 	case focusConsole:
 		m.Console.Active = true
+		switchToEnglishInput()
 	}
 }
 
@@ -354,6 +355,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.Left.Active = false
 				m.Right.Active = false
 				m.Console.Active = true
+				switchToEnglishInput()
 			} else {
 				m.viewer = cur.Path
 				m.loadViewerBuffer()
@@ -447,6 +449,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.Left.Active = false
 		m.Right.Active = false
 		m.Console.Active = true
+		switchToEnglishInput()
 	}
 
 	return m, nil
