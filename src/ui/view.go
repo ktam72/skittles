@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ktam72/skittles/src/fs"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -104,6 +105,24 @@ func (m *Model) View() string {
 	if m.mode == ModeRename {
 		return m.renderWithRename(topBar)
 	}
+	if m.mode == ModeFilter {
+		return m.renderWithFilter(topBar)
+	}
+	if m.mode == ModeChmod {
+		return m.renderWithChmod(topBar)
+	}
+	if m.mode == ModeFileSearch {
+		return m.renderWithFileSearch(topBar)
+	}
+	if m.mode == ModeGrep {
+		return m.renderWithGrep(topBar)
+	}
+	if m.mode == ModePathHistory {
+		return m.renderWithPathHistory(topBar)
+	}
+	if m.mode == ModeCompare {
+		return m.renderCompareView()
+	}
 
 	return m.renderBrowseBody(topBar)
 }
@@ -139,6 +158,168 @@ func (m *Model) renderWithRename(topBar string) string {
 	}
 	current := string(m.renameInput) + cursor
 	content := fmt.Sprintf("Rename:\n  %s\n\nto:\n  %s\n", base, current)
+	dialog := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("63")).
+		Padding(1, 2).
+		Width(50).
+		Render(content)
+	dialogH := strings.Count(dialog, "\n") + 3
+
+	savedH := m.Left.Height
+	m.Left.Height -= dialogH
+	m.Right.Height -= dialogH
+	if m.Left.Height < 3 {
+		m.Left.Height = 3
+		m.Right.Height = 3
+	}
+	left := m.renderPane(m.Left, m.Focus == focusLeft)
+	right := m.renderPane(m.Right, m.Focus == focusRight)
+	m.Left.Height = savedH
+	m.Right.Height = savedH
+
+	top := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	sep := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Render(strings.Repeat("─", m.Width))
+	console := m.renderConsole()
+	bindings := m.renderBindings()
+
+	body := lipgloss.JoinVertical(lipgloss.Left, topBar, top, dialog, sep, console, bindings)
+	return body
+}
+
+func (m *Model) renderWithFilter(topBar string) string {
+	cursor := " "
+	if m.cursorOn {
+		cursor = "█"
+	}
+	current := string(m.filterInput) + cursor
+	prompt := "Filter pattern (glob, empty=clear):"
+	if m.filterInput == nil {
+		current = cursor
+	}
+	content := fmt.Sprintf("\n%s\n\n  %s\n", prompt, current)
+	dialog := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("63")).
+		Padding(1, 2).
+		Width(50).
+		Render(content)
+	dialogH := strings.Count(dialog, "\n") + 3
+
+	savedH := m.Left.Height
+	m.Left.Height -= dialogH
+	m.Right.Height -= dialogH
+	if m.Left.Height < 3 {
+		m.Left.Height = 3
+		m.Right.Height = 3
+	}
+	left := m.renderPane(m.Left, m.Focus == focusLeft)
+	right := m.renderPane(m.Right, m.Focus == focusRight)
+	m.Left.Height = savedH
+	m.Right.Height = savedH
+
+	top := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	sep := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Render(strings.Repeat("─", m.Width))
+	console := m.renderConsole()
+	bindings := m.renderBindings()
+
+	body := lipgloss.JoinVertical(lipgloss.Left, topBar, top, dialog, sep, console, bindings)
+	return body
+}
+
+func (m *Model) renderWithChmod(topBar string) string {
+	cursor := " "
+	if m.cursorOn {
+		cursor = "█"
+	}
+	current := string(m.chmodInput) + cursor
+	content := fmt.Sprintf("\nchmod:\n  %s\n\nMode (octal):\n  %s\n", m.chmodPath, current)
+	dialog := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("63")).
+		Padding(1, 2).
+		Width(50).
+		Render(content)
+	dialogH := strings.Count(dialog, "\n") + 3
+
+	savedH := m.Left.Height
+	m.Left.Height -= dialogH
+	m.Right.Height -= dialogH
+	if m.Left.Height < 3 {
+		m.Left.Height = 3
+		m.Right.Height = 3
+	}
+	left := m.renderPane(m.Left, m.Focus == focusLeft)
+	right := m.renderPane(m.Right, m.Focus == focusRight)
+	m.Left.Height = savedH
+	m.Right.Height = savedH
+
+	top := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	sep := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Render(strings.Repeat("─", m.Width))
+	console := m.renderConsole()
+	bindings := m.renderBindings()
+
+	body := lipgloss.JoinVertical(lipgloss.Left, topBar, top, dialog, sep, console, bindings)
+	return body
+}
+
+func (m *Model) renderWithFileSearch(topBar string) string {
+	cursor := " "
+	if m.cursorOn {
+		cursor = "█"
+	}
+	current := string(m.fileSearchPattern) + cursor
+	if m.fileSearchPattern == nil {
+		current = cursor
+	}
+	content := fmt.Sprintf("\nFile Search (glob pattern):\n\n  %s\n\nEnter=search  ESC=cancel\n", current)
+	dialog := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("63")).
+		Padding(1, 2).
+		Width(50).
+		Render(content)
+	dialogH := strings.Count(dialog, "\n") + 3
+
+	savedH := m.Left.Height
+	m.Left.Height -= dialogH
+	m.Right.Height -= dialogH
+	if m.Left.Height < 3 {
+		m.Left.Height = 3
+		m.Right.Height = 3
+	}
+	left := m.renderPane(m.Left, m.Focus == focusLeft)
+	right := m.renderPane(m.Right, m.Focus == focusRight)
+	m.Left.Height = savedH
+	m.Right.Height = savedH
+
+	top := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	sep := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Render(strings.Repeat("─", m.Width))
+	console := m.renderConsole()
+	bindings := m.renderBindings()
+
+	body := lipgloss.JoinVertical(lipgloss.Left, topBar, top, dialog, sep, console, bindings)
+	return body
+}
+
+func (m *Model) renderWithGrep(topBar string) string {
+	cursor := " "
+	if m.cursorOn {
+		cursor = "█"
+	}
+	current := string(m.grepPattern) + cursor
+	if m.grepPattern == nil {
+		current = cursor
+	}
+	content := fmt.Sprintf("\nGrep (case-insensitive):\n\n  %s\n\nEnter=search  ESC=cancel\n", current)
 	dialog := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
@@ -299,10 +480,112 @@ func (m *Model) styleRow(r RowInfo, paneWidth int) string {
 	}
 }
 
+func (m *Model) renderWithPathHistory(topBar string) string {
+	dirs := m.FocusedPane().PathHistory
+	if dirs == nil {
+		dirs = []string{}
+	}
+	n := len(dirs)
+	if n > 9 {
+		n = 9
+	}
+	lines := make([]string, n)
+	for i := 0; i < n; i++ {
+		lines[i] = fmt.Sprintf(" %d. %s", i+1, dirs[len(dirs)-n+i])
+	}
+	content := strings.Join(lines, "\n")
+	if content == "" {
+		content = " (no history)"
+	}
+	content = fmt.Sprintf("\nPath History:\n\n%s\n\n[1-9]:jump  ESC:close\n", content)
+	dialog := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("63")).
+		Padding(1, 2).
+		Width(60).
+		Render(content)
+	dialogH := strings.Count(dialog, "\n") + 3
+
+	savedH := m.Left.Height
+	m.Left.Height -= dialogH
+	m.Right.Height -= dialogH
+	if m.Left.Height < 3 {
+		m.Left.Height = 3
+		m.Right.Height = 3
+	}
+	left := m.renderPane(m.Left, m.Focus == focusLeft)
+	right := m.renderPane(m.Right, m.Focus == focusRight)
+	m.Left.Height = savedH
+	m.Right.Height = savedH
+
+	top := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	sep := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Render(strings.Repeat("─", m.Width))
+	console := m.renderConsole()
+	bindings := m.renderBindings()
+
+	body := lipgloss.JoinVertical(lipgloss.Left, topBar, top, dialog, sep, console, bindings)
+	return body
+}
+
+func (m *Model) renderCompareView() string {
+	viewH := m.Height - 3
+	if viewH < 1 {
+		viewH = 1
+	}
+
+	var visible []string
+	end := m.viewerOff + viewH
+	if end > len(m.compareResult) {
+		end = len(m.compareResult)
+	}
+	stats := map[fs.DiffKind]int{}
+	for _, d := range m.compareResult {
+		stats[d.Kind]++
+	}
+	summary := fmt.Sprintf("Same:%d  LeftOnly:%d  RightOnly:%d  Different:%d",
+		stats[fs.DiffSame], stats[fs.DiffLeftOnly], stats[fs.DiffRightOnly], stats[fs.DiffDifferent])
+
+	for i := m.viewerOff; i < end; i++ {
+		if i >= len(m.compareResult) {
+			break
+		}
+		d := m.compareResult[i]
+		switch d.Kind {
+		case fs.DiffSame:
+			visible = append(visible, lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Render(fmt.Sprintf(" = %s", d.Name)))
+		case fs.DiffLeftOnly:
+			visible = append(visible, lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Render(fmt.Sprintf(" L %s", d.Name)))
+		case fs.DiffRightOnly:
+			visible = append(visible, lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render(fmt.Sprintf(" R %s", d.Name)))
+		case fs.DiffDifferent:
+			visible = append(visible, lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Render(fmt.Sprintf(" ! %s  (L:%d  R:%d)", d.Name, d.LeftSize, d.RightSize)))
+		}
+	}
+	for len(visible) < viewH {
+		visible = append(visible, "")
+	}
+
+	content := strings.Join(visible, "\n")
+	style := lipgloss.NewStyle().
+		Padding(0, 2).
+		Foreground(lipgloss.Color("15"))
+
+	info := fmt.Sprintf("─── File Compare ─── %s [ESC:close  ↑↓:scroll  L%d/%d]", summary, m.viewerOff+1, len(m.compareResult))
+	header := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("15")).
+		Background(lipgloss.Color("236")).
+		Render(info)
+
+	return lipgloss.JoinVertical(lipgloss.Left, header, style.Render(content))
+}
+
 func (m *Model) renderBindings() string {
 	hints := []string{
 		"↑↓:nav", "Enter:open", "Tab:focus(3-pane)",
 		"Space:mark", "BS:parent", "r:rename", "c:copy", "m:move", "d:del", "p:preview",
+		"F:filter", "f:search", "g:grep", "H:history", "C:chmod", "=:compare",
 		"ESC×2:quit",
 	}
 	return hintStyle.Render(strings.Join(hints, "  |  "))
@@ -336,14 +619,35 @@ func (m *Model) renderViewer() string {
 		Padding(0, 2).
 		Foreground(lipgloss.Color("15"))
 
-	info := fmt.Sprintf("─── %s ─── [ESC:close ↑↓:scroll  L%d/%d]",
-		m.viewer, m.viewerOff+1, len(m.viewerBuf))
+	searchInfo := ""
+	if len(m.searchResults) > 0 {
+		searchInfo = fmt.Sprintf("  Match %d/%d", m.searchIdx+1, len(m.searchResults))
+	}
+	title := m.viewer
+	if m.viewerTitle != "" {
+		title = m.viewerTitle
+	}
+	info := fmt.Sprintf("─── %s ─── [ESC:close ↑↓:scroll /:search n/N:next  L%d/%d%s]",
+		title, m.viewerOff+1, len(m.viewerBuf), searchInfo)
 	header := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("15")).
 		Background(lipgloss.Color("236")).
 		Render(info)
 
-	return lipgloss.JoinVertical(lipgloss.Left,
-		header,
-		style.Render(content))
+	body := lipgloss.JoinVertical(lipgloss.Left, header, style.Render(content))
+
+	if m.searchActive {
+		cursor := " "
+		if m.cursorOn {
+			cursor = "█"
+		}
+		query := "/" + string(m.searchQuery) + cursor
+		searchBar := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("15")).
+			Background(lipgloss.Color("240")).
+			Render(fmt.Sprintf(" %-*s", m.Width-4, query))
+		body = lipgloss.JoinVertical(lipgloss.Left, body, searchBar)
+	}
+
+	return body
 }

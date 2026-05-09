@@ -38,7 +38,7 @@ func extractArchiveCmd(src string) tea.Cmd {
 	}
 }
 
-const version = "1.3.4"
+const version = "2.0.0"
 
 type Mode int
 
@@ -48,6 +48,12 @@ const (
 	ModeQuit
 	ModeConfirm
 	ModeRename
+	ModeFilter
+	ModeChmod
+	ModeFileSearch
+	ModeGrep
+	ModePathHistory
+	ModeCompare
 )
 
 type Model struct {
@@ -73,6 +79,20 @@ type Model struct {
 
 	renamePath  string
 	renameInput []rune
+
+	filterInput       []rune
+	fileSearchPattern []rune
+	grepPattern       []rune
+	chmodInput        []rune
+	chmodPath         string
+	viewerTitle       string
+
+	searchActive  bool
+	searchQuery   []rune
+	searchResults []int
+	searchIdx     int
+
+	compareResult []fs.DiffEntry
 }
 
 const (
@@ -199,6 +219,24 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case ModeRename:
 			return m.handleRenameMode(msg)
 
+		case ModeFilter:
+			return m.handleFilterMode(msg)
+
+		case ModeChmod:
+			return m.handleChmodMode(msg)
+
+		case ModeFileSearch:
+			return m.handleFileSearchMode(msg)
+
+		case ModeGrep:
+			return m.handleGrepMode(msg)
+
+		case ModePathHistory:
+			return m.handlePathHistoryMode(msg)
+
+		case ModeCompare:
+			return m.handleCompareMode(msg)
+
 		default:
 			if m.Focus == focusConsole {
 				return m.handleConsoleMode(msg)
@@ -258,13 +296,233 @@ func (m *Model) handleRenameMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *Model) handleFilterMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.filterInput = nil
+		m.mode = ModeBrowse
+	case tea.KeyEnter:
+		filter := strings.TrimSpace(string(m.filterInput))
+		p := m.FocusedPane()
+		if p != nil {
+			p.Filter = filter
+			p.Cursor = 0
+			p.Offset = 0
+			p.Reload()
+		}
+		m.filterInput = nil
+		m.mode = ModeBrowse
+	case tea.KeyBackspace:
+		if len(m.filterInput) > 0 {
+			m.filterInput = m.filterInput[:len(m.filterInput)-1]
+		}
+	default:
+		if !msg.Alt && len(msg.String()) == 1 {
+			m.filterInput = append(m.filterInput, []rune(msg.String())...)
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) handleChmodMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.chmodInput = nil
+		m.chmodPath = ""
+		m.mode = ModeBrowse
+	case tea.KeyEnter:
+		modStr := strings.TrimSpace(string(m.chmodInput))
+		if modStr != "" {
+			if err := fs.Chmod(m.chmodPath, modStr); err != nil {
+				m.err = err
+			}
+			m.FocusedPane().Reload()
+		}
+		m.chmodInput = nil
+		m.chmodPath = ""
+		m.mode = ModeBrowse
+	case tea.KeyBackspace:
+		if len(m.chmodInput) > 0 {
+			m.chmodInput = m.chmodInput[:len(m.chmodInput)-1]
+		}
+	default:
+		if !msg.Alt && len(msg.String()) == 1 {
+			m.chmodInput = append(m.chmodInput, []rune(msg.String())...)
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) handleFileSearchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.fileSearchPattern = nil
+		m.mode = ModeBrowse
+	case tea.KeyEnter:
+		pattern := strings.TrimSpace(string(m.fileSearchPattern))
+		if pattern != "" {
+			p := m.FocusedPane()
+			if p != nil {
+				m.Console.AddOutput(fmt.Sprintf("Searching for %q in %s ...", pattern, p.Dir))
+				results, err := fs.SearchFiles(p.Dir, pattern)
+				if err != nil {
+					m.err = err
+				} else if len(results) == 0 {
+					m.Console.AddOutput("No files found.")
+				} else {
+					m.viewerTitle = fmt.Sprintf("File Search: %s", pattern)
+					m.viewerBuf = results
+					m.viewerOff = 0
+					m.mode = ModeView
+					m.fileSearchPattern = nil
+					return m, nil
+				}
+			}
+		}
+		m.fileSearchPattern = nil
+		m.mode = ModeBrowse
+	case tea.KeyBackspace:
+		if len(m.fileSearchPattern) > 0 {
+			m.fileSearchPattern = m.fileSearchPattern[:len(m.fileSearchPattern)-1]
+		}
+	default:
+		if !msg.Alt && len(msg.String()) == 1 {
+			m.fileSearchPattern = append(m.fileSearchPattern, []rune(msg.String())...)
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) handleGrepMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.grepPattern = nil
+		m.mode = ModeBrowse
+	case tea.KeyEnter:
+		pattern := strings.TrimSpace(string(m.grepPattern))
+		if pattern != "" {
+			p := m.FocusedPane()
+			if p != nil {
+				m.Console.AddOutput(fmt.Sprintf("Grepping for %q in %s ...", pattern, p.Dir))
+				results, err := fs.GrepFiles(p.Dir, pattern)
+				if err != nil {
+					m.err = err
+				} else if len(results) == 0 {
+					m.Console.AddOutput("No matches found.")
+				} else {
+					m.viewerTitle = fmt.Sprintf("Grep: %s", pattern)
+					m.viewerBuf = results
+					m.viewerOff = 0
+					m.mode = ModeView
+					m.grepPattern = nil
+					return m, nil
+				}
+			}
+		}
+		m.grepPattern = nil
+		m.mode = ModeBrowse
+	case tea.KeyBackspace:
+		if len(m.grepPattern) > 0 {
+			m.grepPattern = m.grepPattern[:len(m.grepPattern)-1]
+		}
+	default:
+		if !msg.Alt && len(msg.String()) == 1 {
+			m.grepPattern = append(m.grepPattern, []rune(msg.String())...)
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) handlePathHistoryMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	p := m.FocusedPane()
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.mode = ModeBrowse
+	case tea.KeyRunes:
+		if len(msg.Runes) == 1 && msg.Runes[0] >= '1' && msg.Runes[0] <= '9' {
+			idx := int(msg.Runes[0] - '1')
+			hist := p.PathHistory
+			n := len(hist)
+			if n > 9 {
+				n = 9
+			}
+			start := len(hist) - n
+			if start+idx < len(hist) {
+				_ = p.Chdir(hist[start+idx])
+			}
+			m.mode = ModeBrowse
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) handleCompareMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.mode = ModeBrowse
+		m.compareResult = nil
+		m.viewerOff = 0
+	case tea.KeyUp:
+		if m.viewerOff > 0 {
+			m.viewerOff--
+		}
+	case tea.KeyDown:
+		maxOff := len(m.compareResult) - m.Height + 2
+		if maxOff < 0 {
+			maxOff = 0
+		}
+		if m.viewerOff < maxOff {
+			m.viewerOff++
+		}
+	case tea.KeyPgUp:
+		m.viewerOff -= m.Height - 2
+		if m.viewerOff < 0 {
+			m.viewerOff = 0
+		}
+	case tea.KeyPgDown:
+		m.viewerOff += m.Height - 2
+		maxOff := len(m.compareResult) - m.Height + 2
+		if maxOff < 0 {
+			maxOff = 0
+		}
+		if m.viewerOff > maxOff {
+			m.viewerOff = maxOff
+		}
+	}
+	return m, nil
+}
+
 func (m *Model) handleViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.searchActive {
+		switch msg.Type {
+		case tea.KeyEsc:
+			m.searchActive = false
+			m.searchQuery = nil
+		case tea.KeyEnter:
+			m.executeSearch()
+			m.searchActive = false
+		case tea.KeyBackspace:
+			if len(m.searchQuery) > 0 {
+				m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
+			}
+		default:
+			if !msg.Alt && msg.String() != "" && len(msg.String()) == 1 {
+				m.searchQuery = append(m.searchQuery, rune(msg.String()[0]))
+			}
+		}
+		return m, nil
+	}
+
 	switch msg.Type {
 	case tea.KeyEsc:
 		m.mode = ModeBrowse
 		m.viewer = ""
 		m.viewerBuf = nil
 		m.viewerOff = 0
+		m.viewerTitle = ""
+		m.searchResults = nil
+		m.searchQuery = nil
+		m.searchActive = false
 		return m, tea.ClearScreen
 	case tea.KeyUp:
 		if m.viewerOff > 0 {
@@ -307,16 +565,59 @@ func (m *Model) handleViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.viewerOff = maxOff
 		}
 	case tea.KeyRunes:
-		if string(msg.Runes) == "e" || string(msg.Runes) == "E" {
+		switch string(msg.Runes) {
+		case "e", "E":
 			switchToEnglishInput()
 			cmd := &editCmd{Cmd: exec.Command(m.editor, m.viewer)}
 			return m, tea.Exec(cmd, func(err error) tea.Msg {
 				m.loadViewerBuffer()
 				return nil
 			})
+		case "/":
+			m.searchActive = true
+			m.searchQuery = nil
+		case "n":
+			if len(m.searchResults) > 0 {
+				m.searchIdx++
+				if m.searchIdx >= len(m.searchResults) {
+					m.searchIdx = 0
+				}
+				m.viewerOff = m.searchResults[m.searchIdx]
+			}
+		case "N":
+			if len(m.searchResults) > 0 {
+				m.searchIdx--
+				if m.searchIdx < 0 {
+					m.searchIdx = len(m.searchResults) - 1
+				}
+				m.viewerOff = m.searchResults[m.searchIdx]
+			}
 		}
 	}
 	return m, nil
+}
+
+func (m *Model) executeSearch() {
+	m.searchResults = nil
+	m.searchIdx = 0
+	query := strings.ToLower(string(m.searchQuery))
+	if query == "" || len(m.viewerBuf) == 0 {
+		return
+	}
+	for i, line := range m.viewerBuf {
+		clean := strings.Map(func(r rune) rune {
+			if r < 32 || r == 127 {
+				return -1
+			}
+			return r
+		}, line)
+		if strings.Contains(strings.ToLower(clean), query) {
+			m.searchResults = append(m.searchResults, i)
+		}
+	}
+	if len(m.searchResults) > 0 {
+		m.viewerOff = m.searchResults[0]
+	}
 }
 
 func (m *Model) loadViewerBuffer() {
@@ -511,9 +812,9 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		p.PageUp()
 	case "pgdown":
 		p.PageDown()
-	case "home", "g":
+	case "home":
 		p.Home()
-	case "end", "G":
+	case "end":
 		p.End()
 
 	case "enter":
@@ -717,6 +1018,41 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			})
 		}
 
+	case "F":
+		p = m.FocusedPane()
+		if p != nil {
+			m.filterInput = []rune(p.Filter)
+			m.mode = ModeFilter
+		}
+
+	case "f":
+		p = m.FocusedPane()
+		if p != nil {
+			m.fileSearchPattern = nil
+			m.mode = ModeFileSearch
+		}
+
+	case "g":
+		p = m.FocusedPane()
+		if p != nil {
+			m.grepPattern = nil
+			m.mode = ModeGrep
+		}
+
+	case "C":
+		cur := p.Current()
+		if cur != nil {
+			m.chmodPath = cur.Path
+			m.chmodInput = []rune(fmt.Sprintf("%o", cur.Mode.Perm()))
+			m.mode = ModeChmod
+		}
+
+	case "H":
+		p = m.FocusedPane()
+		if p != nil && len(p.PathHistory) > 0 {
+			m.mode = ModePathHistory
+		}
+
 	case "i", "I":
 		cur := p.Current()
 		if cur != nil {
@@ -724,6 +1060,14 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.confirmMessage = info
 			m.confirmAction = nil
 			m.mode = ModeConfirm
+		}
+
+	case "=":
+		l, r := m.Left, m.Right
+		if l.Listing != nil && r.Listing != nil {
+			m.compareResult = fs.CompareDirs(l.Listing, r.Listing)
+			m.viewerOff = 0
+			m.mode = ModeCompare
 		}
 
 	case "!":

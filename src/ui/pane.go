@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/ktam72/skittles/src/fs"
@@ -33,6 +34,8 @@ type Pane struct {
 	ArchiveRoot string
 	RealDir     string
 	SavedCursor int
+	Filter      string
+	PathHistory []string
 }
 
 func NewPane(dir string, width, height int) *Pane {
@@ -55,6 +58,19 @@ func (p *Pane) Reload() {
 		filtered := make([]fs.Entry, 0, len(l.Entries))
 		for _, e := range l.Entries {
 			if e.Name == ".." || !strings.HasPrefix(e.Name, ".") {
+				filtered = append(filtered, e)
+			}
+		}
+		l.Entries = filtered
+	}
+	if p.Filter != "" {
+		filtered := make([]fs.Entry, 0, len(l.Entries))
+		for _, e := range l.Entries {
+			if e.Name == ".." {
+				filtered = append(filtered, e)
+				continue
+			}
+			if matched, _ := filepath.Match(p.Filter, e.Name); matched {
 				filtered = append(filtered, e)
 			}
 		}
@@ -129,6 +145,12 @@ func (p *Pane) ensureVisible() {
 }
 
 func (p *Pane) Chdir(dir string) error {
+	if p.Dir != dir && p.Dir != "" {
+		p.PathHistory = append(p.PathHistory, p.Dir)
+		if len(p.PathHistory) > 20 {
+			p.PathHistory = p.PathHistory[1:]
+		}
+	}
 	p.Dir = dir
 	p.Cursor = 0
 	p.Offset = 0
@@ -182,6 +204,9 @@ func (p *Pane) SelectedEntries() []fs.Entry {
 
 func (p *Pane) RenderHeader() string {
 	dir := p.Dir
+	if p.Filter != "" {
+		dir += fmt.Sprintf(" [Filter: %s]", p.Filter)
+	}
 	if len(dir) > p.Width-2 {
 		dir = "..." + dir[len(dir)-(p.Width-5):]
 	}

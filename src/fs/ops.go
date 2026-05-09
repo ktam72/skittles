@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 func CopyFile(src, dst string) error {
@@ -62,6 +63,14 @@ func Touch(path string) error {
 		return err
 	}
 	return f.Close()
+}
+
+func Chmod(path string, modeStr string) error {
+	mode, err := strconv.ParseUint(modeStr, 8, 32)
+	if err != nil {
+		return fmt.Errorf("invalid mode %q: %w", modeStr, err)
+	}
+	return os.Chmod(path, os.FileMode(mode))
 }
 
 func CopyEntries(srcDir string, entries []Entry, dstDir string) (int, error) {
