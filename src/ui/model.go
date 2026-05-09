@@ -164,8 +164,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Console.AddOutput(fmt.Sprintf("error: %v", msg.err))
 		} else {
 			m.Console.AddOutput(fmt.Sprintf("done: %s", msg.path))
-			m.Console.AddOutput(fmt.Sprintf("temp: %s", msg.tmp))
-			m.outputDirTree(msg.tmp)
 			p.SavedCursor = p.Cursor
 			p.ArchivePath = msg.path
 			p.RealDir = p.Dir
@@ -687,30 +685,6 @@ func isBinaryData(data []byte) bool {
 
 func renderHexView(data []byte) []string {
 	return fs.RenderHexView(data)
-}
-
-func (m *Model) outputDirTree(root string) {
-	entries, _ := os.ReadDir(root)
-	for _, e := range entries {
-		m.dumpTree(root, e, "")
-	}
-}
-
-func (m *Model) dumpTree(root string, entry os.DirEntry, prefix string) {
-	path := filepath.Join(root, entry.Name())
-	fi, _ := entry.Info()
-	if fi != nil && fi.IsDir() {
-		m.Console.AddOutput(fmt.Sprintf("  %s%s/", prefix, entry.Name()))
-		sub, _ := os.ReadDir(path)
-		childPrefix := prefix + "  "
-		for i, s := range sub {
-			if i >= 30 {
-				m.Console.AddOutput(fmt.Sprintf("  %s... (%d more)", childPrefix, len(sub)-i))
-				break
-			}
-			m.dumpTree(path, s, childPrefix)
-		}
-	}
 }
 
 func consoleOutputCmd(ch chan string) tea.Cmd {
