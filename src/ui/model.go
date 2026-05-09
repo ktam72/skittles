@@ -493,6 +493,9 @@ func (m *Model) cycleFocus() {
 
 func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	p := m.FocusedPane()
+	if p == nil {
+		return m, nil
+	}
 	opp := m.OppPane()
 
 	switch msg.String() {
