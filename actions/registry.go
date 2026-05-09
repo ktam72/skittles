@@ -13,6 +13,7 @@ type Action struct {
 	Command string
 	Args    []string
 	Look    bool
+	Browse  bool
 }
 
 type Rule struct {
@@ -179,7 +180,6 @@ var magicPatterns = []struct {
 	{0, "\x89PNG", Action{Look: true}},
 	{0, "\xff\xd8\xff", Action{Look: true}},
 	{0, "GIF8", Action{Look: true}},
-	{0, "PK\x03\x04", Action{Command: "unzip -l $P", Args: []string{}}},
 }
 
 var extActions = map[string]Action{
@@ -212,13 +212,15 @@ var extActions = map[string]Action{
 	".bmp":  {Command: "open $P"},
 	".webp": {Command: "open $P"},
 	".mdx":  {Command: "open -a MP4M.app $P"},
-	".lzh":  {Command: "lha x $P"},
-	".zip":  {Command: "unzip -o $P"},
-	".tar":  {Command: "tar xf $P"},
-	".gz":   {Command: "gunzip $P"},
-	".bz2":  {Command: "bunzip2 $P"},
-	".rar":  {Command: "unrar x $P"},
-	".7z":   {Command: "7z x $P"},
+	".lzh":  {Browse: true},
+	".lha":  {Browse: true},
+	".zip":  {Browse: true},
+	".tar":  {Browse: true},
+	".tgz":  {Browse: true},
+	".gz":   {Browse: true},
+	".bz2":  {Browse: true},
+	".rar":  {Browse: true},
+	".7z":   {Browse: true},
 }
 
 func DefaultRegistry() *Registry {

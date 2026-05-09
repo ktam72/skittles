@@ -9,24 +9,28 @@ import (
 )
 
 type RowInfo struct {
-	Text     string
-	IsDir    bool
-	IsLink   bool
-	IsMarked bool
-	IsCursor bool
+	Text      string
+	IsDir     bool
+	IsLink    bool
+	IsMarked  bool
+	IsCursor  bool
+	IsArchive bool
 }
 
 type Pane struct {
-	Dir     string
-	Listing *fs.Listing
-	Cursor  int
-	Offset  int
-	Active  bool
-	Width   int
-	Height  int
-	Marked  map[string]bool
-	SortBy  fs.SortMode
-	ShowDot bool
+	Dir         string
+	Listing     *fs.Listing
+	Cursor      int
+	Offset      int
+	Active      bool
+	Width       int
+	Height      int
+	Marked      map[string]bool
+	SortBy      fs.SortMode
+	ShowDot     bool
+	IsArchive   bool
+	ArchivePath string
+	RealDir     string
 }
 
 func NewPane(dir string, width, height int) *Pane {
@@ -196,11 +200,12 @@ func (p *Pane) RenderRows() []RowInfo {
 		}
 		e := &entries[idx]
 		rows = append(rows, RowInfo{
-			Text:     p.formatEntryLine(e),
-			IsDir:    e.IsDir,
-			IsLink:   e.IsLink,
-			IsMarked: p.Marked[e.Name],
-			IsCursor: idx == p.Cursor,
+			Text:      p.formatEntryLine(e),
+			IsDir:     e.IsDir,
+			IsLink:    e.IsLink,
+			IsMarked:  p.Marked[e.Name],
+			IsCursor:  idx == p.Cursor,
+			IsArchive: p.IsArchive,
 		})
 	}
 	return rows

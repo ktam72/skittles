@@ -219,6 +219,12 @@ func (m *Model) loadViewerBuffer() {
 		return
 	}
 
+	if isBinaryData(data) {
+		m.viewerBuf = renderHexView(data)
+		m.viewerOff = 0
+		return
+	}
+
 	var buf bytes.Buffer
 	lang := ""
 	lexer := lexers.Match(filepath.Base(m.viewer))
@@ -338,14 +344,26 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			_ = p.Chdir(abs)
 		} else {
 			act := m.reg.Resolve(cur.Path)
-			if act.Look {
+			if act.Browse {
+				tmp, err := fs.ExtractToTemp(cur.Path)
+				if err != nil {
+					m.err = err
+				} else {
+					p.ArchivePath = cur.Path
+					p.RealDir = p.Dir
+					p.IsArchive = true
+					_ = p.Chdir(tmp)
+				}
+			} else if act.Look {
 				m.viewer = cur.Path
 				m.loadViewerBuffer()
 				m.mode = ModeView
 			} else if act.Command != "" {
 				out := m.runAction(act, cur.Path)
 				if out != "" {
-					m.Console.AddOutput(out)
+					for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+						m.Console.AddOutput(line)
+					}
 				}
 			} else if isExecutable(cur) {
 				m.Console.ClearInput()
@@ -365,8 +383,16 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "left", "h":
 		if p.Dir != "/" {
-			parent := filepath.Dir(strings.TrimRight(p.Dir, "/"))
-			_ = p.Chdir(parent)
+			if p.IsArchive {
+				_ = os.RemoveAll(p.Dir)
+				p.IsArchive = false
+				p.ArchivePath = ""
+				_ = p.Chdir(p.RealDir)
+				p.RealDir = ""
+			} else {
+				parent := filepath.Dir(strings.TrimRight(p.Dir, "/"))
+				_ = p.Chdir(parent)
+			}
 		}
 
 	case "tab":
@@ -418,6 +444,19 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		cur := p.Current()
 		if cur != nil && !cur.IsDir {
 			_ = exec.Command("open", cur.Path).Run()
+		}
+	case "x":
+		cur := p.Current()
+		if cur != nil && !cur.IsDir {
+			cmd := extractCmdFor(cur.Path)
+			if cmd != "" {
+				out := m.runAction(actions.Action{Command: fmt.Sprintf("%s $P", cmd)}, cur.Path)
+				if out != "" {
+					for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+						m.Console.AddOutput(line)
+					}
+				}
+			}
 		}
 	case "r":
 		p.Reload()
@@ -481,6 +520,48 @@ func (m *Model) runAction(act actions.Action, path string) string {
 
 func isExecutable(e *fs.Entry) bool {
 	return e.Mode&0100 != 0
+}
+
+func isBinaryData(data []byte) bool {
+	n := len(data)
+	if n > 512 {
+		n = 512
+	}
+	for i := 0; i < n; i++ {
+		if data[i] == 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func renderHexView(data []byte) []string {
+	return fs.RenderHexView(data)
+}
+
+func extractCmdFor(path string) string {
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".zip":
+		return "unzip -o $P"
+	case ".tar":
+		return "tar xf $P"
+	case ".tgz", ".gz":
+		if strings.HasSuffix(strings.ToLower(path), ".tar.gz") {
+			return "tar xzf $P"
+		}
+		return "gunzip -c $P > ${P%.*}"
+	case ".bz2":
+		return "bunzip2 -c $P > ${P%.*}"
+	case ".lzh", ".lha":
+		return "lha x $P"
+	case ".rar":
+		return "unrar x $P"
+	case ".7z":
+		return "7z x $P"
+	default:
+		return ""
+	}
 }
 
 func consoleOutputCmd(ch chan string) tea.Cmd {

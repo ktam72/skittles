@@ -32,7 +32,11 @@ ui/
 
 fs/
   ├─ entry.go            ← ファイルエントリ、ディレクトリ一覧、ソート
-  └─ ops.go              ← Copy/Move/Delete/Touch
+  ├─ ops.go              ← Copy/Move/Delete/Touch
+  ├─ archive_common.go   ← アーカイブ展開（Go標準/TAR/ZIP + 外部コマンド）
+  ├─ archive_nocgo.go    ← ExtractToTemp（非CGo時）
+  ├─ archive_cgo.go      ← ExtractToTemp（CGo時: Homebrew libarchive + 7zフォールバック）
+  └─ hexview.go          ← バイナリファイルのHEX表示
 
 actions/
   └─ registry.go         ← マジックバイト/拡張子/ファイル名によるアクション解決
@@ -97,19 +101,16 @@ Skittles v0.1.0                                2026/05/09 12:34:56
 |--------|------|-----|
 | 0 | マジックバイト | `^GIF8` → ビューア |
 | 1 | ファイル名完全一致 | `!Makefile` → ビューア |
-| 2 | 拡張子 | `.go` → ビューア、`.zip` → unzip |
-| 3 | デフォルト | 未登録 → `$EDITOR` |
+| 2 | 拡張子 | `.go` → ビューア、`.zip` → **Browse** |
+| 3 | デフォルト | 未登録 → `$EDITOR`（実行ビットあり）or ビューア（なし） |
 
 `actions/registry.go` の `extActions` マップで定義。
 - `{Look: true}` → ビルトインビューアで開く
+- `{Browse: true}` → **アーカイブ内部ブラウズ**（テンポラリ展開＋ペイン表示）
 - `{Command: "..."}` → 外部コマンド実行 (`$P`, `$F`, `$D`, `$EDITOR` が展開される)
 - 未登録 → 実行ビットあり → `$EDITOR $P` / 実行ビットなし → **ビルトインビューア**
 
-デフォルトアクションは `"$EDITOR $P"`（リテラル。`runAction` 内で `$EDITOR` が展開される）。
-以前は `fmt.Sprintf("%s $P", editor)` と書いていたため `$EDITOR` 未設定時に空文字が展開され、
-ファイル自体をexecしようとするバグがあった。
-
-`.mdx` は `open -a MP4M.app $P` にマッピング。
+`.mdx` は `open -a MP4M.app $P` にマッピング。画像（`.png`等）は `open $P` でプレビュー.app連携。
 
 ### 4. コンソールペイン
 
@@ -128,7 +129,10 @@ Skittles v0.1.0                                2026/05/09 12:34:56
 |-------------|-------------------|--------|
 | `.md` | glamour + プレーンフォールバック | dark |
 | ソースコード全般 | chroma（シンタックスハイライト） | dracula |
+| バイナリ（null含む） | **HEX表示**（`hexview.go`） | 16進＋ASCII |
 | その他テキスト | プレーンテキスト | 白文字 |
+
+HEX表示は `00000000  48 65 6c 6c 6f ...  Hello....` 形式。↑↓/PgUp/PgDown/←→でスクロール。
 
 Markdown は `ui/mdrender.go` でレンダリング。最初に `glamour.Render`（ANSI色付き）を試行し、
 失敗した場合は `renderMarkdownPlain`（簡易パーサー、ANSI不使用）にフォールバック。
@@ -145,7 +149,43 @@ Markdown は `ui/mdrender.go` でレンダリング。最初に `glamour.Render`
 - 先頭文字: `d`(ディレクトリ) / `l`(シンボリックリンク) / `-`(通常ファイル)
 - setuid/setgid/sticky ビットにも対応（`s`/`S`/`t`/`T`）
 
-### 7. 起動時入力ソース制御
+### 7. アーカイブ内部ブラウズ
+
+`.zip` / `.tar` / `.tgz` / `.7z` / `.lzh` / `.rar` / `.gz` / `.bz2` を Enter で開くと、
+テンポラリディレクトリに展開してペインに表示。**通常のディレクトリ操作**（コピー/移動/削除）がそのまま使える。
+
+```
+┌─ [Archive] MDXO_-_MXDRV_Complete_.7z ──┐  ← ヘッダーがピンク色
+│ 📁 drwxr-xr-x MXDRV/                    │  ← ディレクトリ薄ピンク
+│ 📄 -rw-r--r-- readme.txt               │  ← ファイル薄紫
+```
+
+| 操作 | 動作 |
+|------|------|
+| Enter | アーカイブ内部をブラウズ（テンポラリに展開） |
+| `←` | アーカイブビュー終了、テンポラリ削除、元のディレクトリに復帰 |
+| `x` | アーカイブをカレントディレクトリに展開（外部コマンド） |
+
+**アーカイブブラウズ中の色分け**（`view.go`）:
+- ペイン枠: 青 → **ピンク**
+- ヘッダー背景: 青 → **ピンク**
+- ディレクトリ: 水色 → **薄ピンク**
+- ファイル: 白 → **薄紫**
+- カーソル: 青背景 → **濃紫背景**
+
+### 8. アーカイブ展開エンジン
+
+`fs/` 配下の3ファイルで構成:
+
+| ファイル | ビルド条件 | 内容 |
+|---------|-----------|------|
+| `archive_common.go` | 常時 | 形式別展開関数（ZIP/TAR/GZ はGo標準ライブラリ） |
+| `archive_cgo.go` | `cgo` 有効 | Homebrew `libarchive` で展開。7zエラー時は `7z` コマンドにフォールバック |
+| `archive_nocgo.go` | `cgo` 無効 | 全て外部コマンド（`unzip`/`tar`/`7z`/`lha`/`unrar`） |
+
+CGo有効時は `brew install libarchive` が必要。非CGoビルドは `CGO_ENABLED=0 go build` で外部コマンド依存となる。
+
+### 9. 起動時入力ソース制御
 
 macOS のみ、`osascript` で System Events を通じてフォアグラウンドアプリの入力ソースを English に設定。
 アクセシビリティ許可が必要（初回のみダイアログ表示）。`input_darwin.go` のビルドタグ `//go:build darwin` で分離。
@@ -364,8 +404,9 @@ Phase 2 ─ コンソールペイン + マーク           ✅ 完了
 Phase 3 ─ ビューア（Markdown/HL/スクロール）   ✅ 完了
 Phase 4 ─ リアルタイム出力・パーミッション表示 ✅ 完了
 Phase 5 ─ リファクタリング・Lint 0 issues    ✅ 完了
-Phase 6 ─ インクリメンタルサーチ              ⬜ 未着手
-Phase 7 ─ クロスプラットフォーム検証           ⬜ 未着手
-Phase 8 ─ Homebrew Formula / 配布             ⬜ 未着手
-Phase 9 ─ プラグインシステム                  ⬜ 未着手
+Phase 6 ─ アーカイブ内部ブラウズ              ✅ 完了
+Phase 7 ─ HEXビューア・バイナリ判別          ✅ 完了
+Phase 8 ─ インクリメンタルサーチ              ⬜ 未着手
+Phase 9 ─ クロスプラットフォーム検証           ⬜ 未着手
+Phase10 ─ Homebrew Formula / 配布             ⬜ 未着手
 ```

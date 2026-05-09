@@ -18,6 +18,11 @@ var (
 			BorderForeground(lipgloss.Color("63")).
 			Bold(false)
 
+	activeArchivePaneStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(lipgloss.Color("205")).
+				Bold(false)
+
 	inactivePaneStyle = lipgloss.NewStyle().
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(lipgloss.Color("240"))
@@ -35,11 +40,22 @@ var (
 			Background(lipgloss.Color("63")).
 			Bold(true)
 
+	archiveHeaderStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("15")).
+				Background(lipgloss.Color("205")).
+				Bold(true)
+
 	dirStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("81"))
 
+	archiveDirStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("219"))
+
 	fileStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("253"))
+
+	archiveFileStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("218"))
 
 	markedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("15")).
@@ -48,9 +64,16 @@ var (
 	cursorStyle = lipgloss.NewStyle().
 			Background(lipgloss.Color("24"))
 
+	cursorArchiveStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color("53"))
+
 	cursorDirStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("81")).
 			Background(lipgloss.Color("24"))
+
+	cursorArchiveDirStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("219")).
+			Background(lipgloss.Color("53"))
 
 	cursorMarkedStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("15")).
@@ -108,12 +131,19 @@ func (m *Model) renderTopBar() string {
 
 func (m *Model) renderPane(p *Pane, active bool) string {
 	style := inactivePaneStyle
-	if active {
+	if active && p.IsArchive {
+		style = activeArchivePaneStyle
+	} else if active {
 		style = activePaneStyle
 	}
 
+	hStyle := headerStyle
+	if p.IsArchive {
+		hStyle = archiveHeaderStyle
+	}
+
 	header := p.RenderHeader()
-	header = headerStyle.Render(header)
+	header = hStyle.Render(header)
 
 	var styledRows []string
 	for _, row := range p.RenderRows() {
@@ -151,12 +181,20 @@ func (m *Model) styleRow(r RowInfo, paneWidth int) string {
 		return cursorMarkedStyle.Render(text)
 	case r.IsMarked:
 		return markedStyle.Render(text)
+	case r.IsCursor && r.IsDir && r.IsArchive:
+		return cursorArchiveDirStyle.Render(text)
 	case r.IsCursor && r.IsDir:
 		return cursorDirStyle.Render(text)
+	case r.IsCursor && r.IsArchive:
+		return cursorArchiveStyle.Render(text)
 	case r.IsCursor:
 		return cursorStyle.Render(text)
+	case r.IsDir && r.IsArchive:
+		return archiveDirStyle.Render(text)
 	case r.IsDir:
 		return dirStyle.Render(text)
+	case r.IsArchive:
+		return archiveFileStyle.Render(text)
 	case r.IsLink:
 		return linkStyle.Render(text)
 	default:
