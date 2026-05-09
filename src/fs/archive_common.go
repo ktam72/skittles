@@ -14,6 +14,8 @@ import (
 
 	"github.com/bodgit/sevenzip"
 	"github.com/nwaples/rardecode/v2"
+	"golang.org/x/text/encoding/japanese"
+	"golang.org/x/text/transform"
 )
 
 func extractZip(src, dest string) error {
@@ -228,7 +230,8 @@ func extractRarPure(src, dest string) error {
 		if err != nil {
 			return err
 		}
-		target := filepath.Join(dest, hdr.Name)
+		name := decodeRarFilename(hdr.Name)
+		target := filepath.Join(dest, name)
 		if !strings.HasPrefix(target, filepath.Clean(dest)+string(os.PathSeparator)) {
 			continue
 		}
@@ -248,6 +251,14 @@ func extractRarPure(src, dest string) error {
 		}
 	}
 	return nil
+}
+
+func decodeRarFilename(name string) string {
+	decoded, _, err := transform.Bytes(japanese.ShiftJIS.NewDecoder(), []byte(name))
+	if err == nil && len(decoded) > 0 {
+		return string(decoded)
+	}
+	return name
 }
 
 func extractRarFallback(src, dest string) error {
