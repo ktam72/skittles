@@ -14,7 +14,7 @@ X68000 用ファイラー [mint.x](https://opencode.ai) の設計思想を継承
 - **パーミッション・所有者・グループ表示**: 各行に `drwxr-xr-x owner group` 形式
 - **ビルトインビューア**: テキスト・Markdown・ソースコードのシンタックスハイライト対応（スクロール可能）。**バイナリは自動HEX表示**
 - **文字コード自動判別**: UTF-8 / Shift-JIS / EUC-JP を自動検出して表示
-- **アーカイブ内部ブラウズ**: ZIP/TAR/7z/GZ/BZ2 を **pure Goで内部展開**、RARはpure Go + unarフォールバックでディレクトリのように閲覧・操作
+- **アーカイブ内部ブラウズ**: ZIP/TAR/7z/GZ/BZ2 を **pure Goで内部展開**、ディレクトリのように閲覧・操作
 - **拡張子→アクション**: `.go` → ビューア、`.zip` → ブラウズ、`.mdx` → MP4M.app 等
 - **コンソールペイン**: **cd対応・`$`プロンプト表示**、コマンドの**リアルタイム出力**、履歴
 - **クロスプラットフォーム**: macOS / Linux / Windows（pure Go、CGo不要）
@@ -59,7 +59,6 @@ cd .. && ./skittles
 | TAR/TGZ | Go標準 `archive/tar` + `compress/gzip` |
 | BZ2/TBZ2 | Go標準 `compress/bzip2` |
 | 7z | `github.com/bodgit/sevenzip`（pure Go） |
-| RAR | `github.com/nwaples/rardecode/v2`（pure Go、読み取り専用） |
 
 全て pure Go。CGo不要。外部コマンド依存ゼロ。
 

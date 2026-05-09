@@ -40,8 +40,6 @@ func ExtractToTemp(src string) (string, error) {
 		}
 	case ".7z":
 		err = extractSevenZip(src, dest)
-	case ".rar":
-		err = extractRar(src, dest)
 	default:
 		err = fmt.Errorf("unsupported archive: %s", ext)
 	}

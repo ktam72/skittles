@@ -217,7 +217,6 @@ var extActions = map[string]Action{
 	".tgz":  {Browse: true},
 	".gz":   {Browse: true},
 	".bz2":  {Browse: true},
-	".rar":  {Browse: true},
 	".7z":   {Browse: true},
 }
 

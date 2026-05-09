@@ -8,14 +8,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/bodgit/sevenzip"
-	"github.com/nwaples/rardecode/v2"
-	"golang.org/x/text/encoding/japanese"
-	"golang.org/x/text/transform"
 )
 
 func extractZip(src, dest string) error {
@@ -198,75 +194,6 @@ func extractSevenZip(src, dest string) error {
 		if err != nil {
 			return fmt.Errorf("write %s: %w", f.Name, err)
 		}
-	}
-	return nil
-}
-
-func extractRar(src, dest string) error {
-	err := extractRarPure(src, dest)
-	if err == nil {
-		return nil
-	}
-	return extractRarFallback(src, dest)
-}
-
-func extractRarPure(src, dest string) error {
-	f, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("open rar: %w", err)
-	}
-	defer func() { _ = f.Close() }()
-
-	rr, err := rardecode.NewReader(f)
-	if err != nil {
-		return err
-	}
-
-	for {
-		hdr, err := rr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		name := decodeRarFilename(hdr.Name)
-		target := filepath.Join(dest, name)
-		if !strings.HasPrefix(target, filepath.Clean(dest)+string(os.PathSeparator)) {
-			continue
-		}
-		if hdr.IsDir {
-			_ = os.MkdirAll(target, 0755)
-			continue
-		}
-		_ = os.MkdirAll(filepath.Dir(target), 0755)
-		out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, hdr.Mode())
-		if err != nil {
-			return fmt.Errorf("create %s: %w", hdr.Name, err)
-		}
-		_, err = io.Copy(out, rr)
-		_ = out.Close()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func decodeRarFilename(name string) string {
-	decoded, _, err := transform.Bytes(japanese.ShiftJIS.NewDecoder(), []byte(name))
-	if err == nil && len(decoded) > 0 {
-		return string(decoded)
-	}
-	return name
-}
-
-func extractRarFallback(src, dest string) error {
-	cmd := exec.Command("unar", "-o", dest, "-D", "-q", src)
-	cmd.Dir = dest
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("unar: %v\n%s", err, string(out))
 	}
 	return nil
 }
