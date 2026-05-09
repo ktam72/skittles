@@ -25,15 +25,20 @@ src/
 │   └─ input_other.go      ← Linux/Windows: 何もしない（no-op）
 ├── ui/
 │   ├─ model.go            ← Elm Model/Update（全状態管理・イベントディスパッチ）
-│   ├─ pane.go             ← ファイルペイン（カーソル/マーク/ソート/表示、パーミッション表示）
-│   ├─ console.go          ← コンソールペイン（出力バッファ/コマンド履歴/入力、リアルタイム出力）
+│   ├─ pane.go             ← ファイルペイン（カーソル/マーク/ソート/表示、パーミッション+所有者表示）
+│   ├─ console.go          ← コンソールペイン（出力バッファ/コマンド履歴/入力、cd対応、$プロンプト）
 │   ├─ mdrender.go         ← Markdown レンダリング（glamour + プレーンテキストフォールバック）
+│   ├─ open_darwin.go      ← open（macOS: open, Linux: xdg-open, Windows: start）
+│   ├─ open_linux.go
+│   ├─ open_windows.go
+│   ├─ input_darwin.go     ← 英数入力切替（uiパッケージ版、コンソールフォーカス時）
 │   └─ view.go             ← lipgloss レンダリング、3ペインレイアウト、トップバー
 ├── fs/
-│   ├─ entry.go            ← ファイルエントリ、ディレクトリ一覧、ソート
+│   ├─ entry.go            ← ファイルエントリ、ディレクトリ一覧、ソート、所有者/グループ
 │   ├─ ops.go              ← Copy/Move/Delete/Touch
 │   ├─ archive_common.go   ← アーカイブ展開（ZIP/TAR/GZ/BZ2→Go標準、7z→sevenzip）
 │   ├─ archive_nocgo.go    ← ExtractToTemp エントリ（LZH/RAR→外部コマンド）
+│   ├─ encode.go           ← 文字コード自動判別（UTF-8/Shift-JIS/EUC-JP）
 │   └─ hexview.go          ← バイナリファイルのHEX表示
 ├── actions/
 │   └─ registry.go         ← マジックバイト/拡張子/ファイル名によるアクション解決
@@ -196,19 +201,21 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 | ↑ / k | カーソル上 |
 | ↓ / j | カーソル下 |
 | PgUp / b | 1ページ上 |
-| PgDown / Space | 1ページ下 |
+| PgDown | 1ページ下 |
 | Home / g | 先頭へ |
 | End / G | 末尾へ |
 | Enter | ディレクトリ進入 / アクション実行 |
-| ← / h | 親ディレクトリへ |
+| Option+Enter | 外部アプリでプレビュー（pキーと同動作） |
+| ← / h / Backspace | 親ディレクトリへ / アーカイブを抜ける |
 | Tab | フォーカス切替（Left→Right→Console→Left） |
-| Space / Backspace | カーソル行をマーク/マーク解除して次の行へ |
+| Space | カーソル行をマーク/マーク解除して次の行へ |
 | a | 全ファイルマーク |
-| **p** | **外部アプリでプレビュー（`open` コマンド）** |
+| p | 外部アプリでプレビュー（`open` コマンド） |
 | c | 選択エントリを反対ペインへコピー |
 | m | 選択エントリを反対ペインへ移動 |
 | d | 削除（確認ダイアログ → 毎回確認/以降省略/キャンセル） |
-| r | カレントディレクトリ再読込 |
+| r | ファイル名リネーム |
+| R | カレントディレクトリ再読込 |
 | sr | ソート順切替（名前→日時→拡張子→サイズ→ループ） |
 | E | エディタで開く（$EDITOR） |
 | ! | コンソールペインへジャンプ（コマンド入力モード） |
@@ -219,15 +226,29 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 
 ### コンソールモード
 
+コンソールは **端末エミュレータ** として機能。`cd` コマンドがビルトインされており、カレントディレクトリを変更できる。
+プロンプトは `$` + 現在のディレクトリパス。
+
 | キー | 機能 |
 |------|------|
 | 文字入力 | コマンドライン編集 |
-| Enter | コマンド実行（出力はコンソールバッファに追記） |
+| Enter | コマンド実行（出力は goroutine + channel でリアルタイム表示） |
 | ↑ | 履歴戻る（入力なし時は出力スクロールアップ） |
 | ↓ | 履歴進む |
 | Backspace | 1文字削除 |
 | ESC | ファイルペインに復帰 |
 | Tab | 次のペインへ |
+
+### リネームモード
+
+`r` キーで起動。リネームダイアログが画面内にインライン表示される。
+
+| キー | 機能 |
+|------|------|
+| 文字入力 | ファイル名編集 |
+| Enter | リネーム実行（os.Rename） |
+| Backspace | 1文字削除 |
+| ESC | キャンセル |
 
 ### ビューモード
 
@@ -266,13 +287,14 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 ### 各行の表示要素
 
 ```
-📁 drwxr-xr-x Documents                        4.0K
-📄 -rw-r--r-- main.go                          1.2K
-🔗 lrwxr-xr-x link                              52B
+📁 drwxr-xr-x ktam     staff    Documents                   4.0K
+📄 -rw-r--r-- ktam     staff    main.go                     1.2K
+🔗 lrwxr-xr-x ktam     staff    link                         52B
 ```
 
 - 先頭アイコン: 📁 ディレクトリ、🔗 シンボリックリンク、なし 通常ファイル
 - パーミッション: 10桁（d/-/l + rwxrwxrwx）、setuid/setgid/sticky対応
+- **所有者** と **グループ**: uid/gid からユーザ名に変換、8桁右寄せ（lookupUser/lookupGroup でキャッシュ）
 - ファイル名: ペイン幅に合わせて動的トランケート（`…`）
 - サイズ: B/K/M/G 単位、右寄せ8桁固定
 
@@ -405,14 +427,17 @@ mint.x の独自価値は「2画面による暗黙コンテキスト」にあり
 ## 開発ロードマップ
 
 ```
-Phase 1 ─ 基本2画面 + ファイル操作           ✅ 完了
-Phase 2 ─ コンソールペイン + マーク           ✅ 完了
-Phase 3 ─ ビューア（Markdown/HL/スクロール）   ✅ 完了
-Phase 4 ─ リアルタイム出力・パーミッション表示 ✅ 完了
-Phase 5 ─ リファクタリング・Lint 0 issues    ✅ 完了
-Phase 6 ─ アーカイブ内部ブラウズ              ✅ 完了
-Phase 7 ─ HEXビューア・バイナリ判別          ✅ 完了
-Phase 8 ─ インクリメンタルサーチ              ⬜ 未着手
-Phase 9 ─ クロスプラットフォーム検証           ⬜ 未着手
-Phase10 ─ Homebrew Formula / 配布             ⬜ 未着手
+Phase 1  ─ 基本2画面 + ファイル操作           ✅ 完了
+Phase 2  ─ コンソールペイン + マーク           ✅ 完了
+Phase 3  ─ ビューア（Markdown/HL/スクロール）   ✅ 完了
+Phase 4  ─ リアルタイム出力・パーミッション表示 ✅ 完了
+Phase 5  ─ リファクタリング・Lint 0 issues    ✅ 完了
+Phase 6  ─ アーカイブ内部ブラウズ              ✅ 完了
+Phase 7  ─ HEXビューア・バイナリ判別          ✅ 完了
+Phase 8  ─ リネームモード・削除確認           ✅ 完了
+Phase 9  ─ 文字コード自動判別                 ✅ 完了
+Phase10  ─ クロスプラットフォーム（pure Go）   ✅ 完了
+Phase11  ─ インクリメンタルサーチ              ⬜ 未着手
+Phase12  ─ Homebrew Formula / 配布             ⬜ 未着手
+Phase13  ─ プラグインシステム                  ⬜ 未着手
 ```
