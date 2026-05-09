@@ -60,8 +60,14 @@ func (c *Console) Exec(cmdLine string) {
 	if parts[0] == "cd" {
 		target := c.Dir
 		if len(parts) >= 2 {
-			if parts[1] == "-" {
-			} else if strings.HasPrefix(parts[1], "/") {
+			arg := parts[1]
+			if arg == "-" {
+			} else if strings.HasPrefix(arg, "~/") {
+				home, _ := os.UserHomeDir()
+				target = home + arg[1:]
+			} else if arg == "~" {
+				target, _ = os.UserHomeDir()
+			} else if strings.HasPrefix(arg, "/") {
 				target = parts[1]
 			} else {
 				target = c.Dir + "/" + parts[1]
