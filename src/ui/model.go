@@ -3,6 +3,7 @@ package ui
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +18,12 @@ import (
 	"github.com/atotto/clipboard"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+type editCmd struct{ *exec.Cmd }
+
+func (c *editCmd) SetStdin(r io.Reader)  { c.Stdin = r }
+func (c *editCmd) SetStdout(w io.Writer) { c.Stdout = w }
+func (c *editCmd) SetStderr(w io.Writer) { c.Stderr = w }
 
 type archiveExtractedMsg struct {
 	tmp  string
@@ -296,6 +303,18 @@ func (m *Model) handleViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		if m.viewerOff > maxOff {
 			m.viewerOff = maxOff
+		}
+	case tea.KeyRunes:
+		if string(msg.Runes) == "E" {
+			editor := os.Getenv("EDITOR")
+			if editor == "" {
+				editor = "vim"
+			}
+			cmd := &editCmd{Cmd: exec.Command(editor, m.viewer)}
+			return m, tea.Exec(cmd, func(err error) tea.Msg {
+				m.loadViewerBuffer()
+				return nil
+			})
 		}
 	}
 	return m, nil
