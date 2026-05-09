@@ -355,7 +355,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		p.Down(1)
 	case "pgup", "b":
 		p.PageUp()
-	case "pgdown", " ":
+	case "pgdown":
 		p.PageDown()
 	case "home", "g":
 		p.Home()
@@ -426,7 +426,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "tab":
 		m.cycleFocus()
 
-	case "backspace", "bs":
+	case "backspace", "bs", " ":
 		p.ToggleMark()
 		p.Down(1)
 

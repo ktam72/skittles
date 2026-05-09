@@ -251,7 +251,7 @@ func (m *Model) styleRow(r RowInfo, paneWidth int) string {
 func (m *Model) renderBindings() string {
 	hints := []string{
 		"↑↓:nav", "Enter:open", "Tab:focus(3-pane)",
-		"c:copy", "m:move", "d:del", "a:mark all", "p:preview",
+		"Space:mark", "c:copy", "m:move", "d:del", "p:preview",
 		"ESC×2:quit",
 	}
 	return hintStyle.Render(strings.Join(hints, "  |  "))

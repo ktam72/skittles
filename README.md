@@ -93,7 +93,7 @@ CGo無効の場合は `brew install p7zip lha unrar` 等が必要です。
 | `← / h` | 親ディレクトリへ |
 | `Tab` | フォーカス切替（Left→Right→Console→Left） |
 | `Space / b` | ページ送り / 戻し |
-| `Backspace` | マーク |
+| `Space / Backspace` | マーク |
 | `a` | 全マーク |
 | `p` | 外部アプリでプレビュー（画像→プレビュー.app 等） |
 | `c` | 反対ペインへコピー |

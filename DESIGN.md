@@ -204,7 +204,7 @@ macOS のみ、`osascript` で System Events を通じてフォアグラウン�
 | Enter | ディレクトリ進入 / アクション実行 |
 | ← / h | 親ディレクトリへ |
 | Tab | フォーカス切替（Left→Right→Console→Left） |
-| Backspace | カーソル行をマーク/マーク解除して次の行へ |
+| Space / Backspace | カーソル行をマーク/マーク解除して次の行へ |
 | a | 全ファイルマーク |
 | **p** | **外部アプリでプレビュー（`open` コマンド）** |
 | c | 選択エントリを反対ペインへコピー |
