@@ -17,7 +17,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const version = "0.2.0"
+const version = "0.3.0"
 
 type Mode int
 
