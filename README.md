@@ -33,12 +33,6 @@ golangci-lintで検出した問題を潰してあります。
 
 ## インストール
 
-### Homebrew（準備中）
-
-```bash
-brew install ktam72/tap/skittles
-```
-
 ### Go
 
 ```bash
@@ -78,7 +72,7 @@ go build -o skittles ./src
 ./skittles
 
 # 左右別のディレクトリで起動
-./skittles /usr/local /opt/homebrew
+./skittles /usr/local /usr/local
 
 # 同じディレクトリで起動
 ./skittles ~/Documents
