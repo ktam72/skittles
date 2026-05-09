@@ -32,9 +32,8 @@ src/
 ├── fs/
 │   ├─ entry.go            ← ファイルエントリ、ディレクトリ一覧、ソート
 │   ├─ ops.go              ← Copy/Move/Delete/Touch
-│   ├─ archive_common.go   ← アーカイブ展開（Go標準/TAR/ZIP + 外部コマンド）
-│   ├─ archive_nocgo.go    ← ExtractToTemp（非CGo時）
-│   ├─ archive_cgo.go      ← ExtractToTemp（CGo時: Homebrew libarchive + 7zフォールバック）
+│   ├─ archive_common.go   ← アーカイブ展開（ZIP/TAR/GZ/BZ2→Go標準、7z→sevenzip）
+│   ├─ archive_nocgo.go    ← ExtractToTemp エントリ（LZH/RAR→外部コマンド）
 │   └─ hexview.go          ← バイナリファイルのHEX表示
 ├── actions/
 │   └─ registry.go         ← マジックバイト/拡張子/ファイル名によるアクション解決
@@ -172,15 +171,14 @@ Markdown は `ui/mdrender.go` でレンダリング。最初に `glamour.Render`
 
 ### 8. アーカイブ展開エンジン
 
-`fs/` 配下の3ファイルで構成:
+`fs/` 配下のファイルで構成:
 
-| ファイル | ビルド条件 | 内容 |
-|---------|-----------|------|
-| `archive_common.go` | 常時 | 形式別展開関数（ZIP/TAR/GZ はGo標準ライブラリ） |
-| `archive_cgo.go` | `cgo` 有効 | Homebrew `libarchive` で展開。7zエラー時は `7z` コマンドにフォールバック |
-| `archive_nocgo.go` | `cgo` 無効 | 全て外部コマンド（`unzip`/`tar`/`7z`/`lha`/`unrar`） |
+| ファイル | 内容 |
+|---------|------|
+| `archive_common.go` | ZIP/TAR/GZ/BZ2 → Go標準ライブラリ、7z → sevenzip（pure Go） |
+| `archive_nocgo.go` | ExtractToTemp エントリ、LZH/RAR → 外部コマンドフォールバック |
 
-CGo有効時は `brew install libarchive` が必要。非CGoビルドは `CGO_ENABLED=0 go build` で外部コマンド依存となる。
+全プラットフォーム共通。CGo不要。`go build` 一発でビルド可能。
 
 ### 9. 起動時入力ソース制御
 
@@ -336,6 +334,8 @@ sr キーで循環: 名前 → 日時 → 拡張子 → サイズ → (戻る)
 ```bash
 cd src
 go build -o ../skittles .
+go vet ./...
+golangci-lint run ./...
 ```
 
 ### 品質管理

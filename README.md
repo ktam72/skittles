@@ -50,23 +50,22 @@ go install github.com/ktam72/skittles@latest
 git clone git@github.com:ktam72/skittles.git
 cd skittles/src
 
-# 依存パッケージ（CGoビルドに必要）
-brew install libarchive p7zip
-
-# ビルド
+# ビルド（CGo不要）
 go build -o ../skittles .
 
 # 実行
 cd .. && ./skittles
 ```
 
-#### アーカイブ形式対応と依存
+#### アーカイブ形式対応
 
-| 形式 | CGo有効（推奨） | CGo無効（`CGO_ENABLED=0`） |
-|------|----------------|---------------------------|
-| ZIP/TAR/GZ | Homebrew libarchive | Go標準ライブラリ（依存不要） |
-| 7z/LZH/RAR | **p7zip**（フォールバック） | 外部コマンド（`7z`/`lha`/`unrar`） |
-| BZ2 | Homebrew libarchive | 外部コマンド（`bunzip2`） |
+| 形式 | エンジン |
+|------|---------|
+| ZIP | Go標準 `archive/zip` |
+| TAR/TGZ | Go標準 `archive/tar` + `compress/gzip` |
+| BZ2/TBZ2 | Go標準 `compress/bzip2` |
+| 7z | `github.com/bodgit/sevenzip`（pure Go） |
+| LZH/RAR | 外部コマンド（`lha` / `unrar`） |
 
 CGo無効の場合は `brew install p7zip lha unrar` 等が必要です。
 
@@ -193,18 +192,12 @@ actions:
 ## 開発
 
 ```bash
-# 依存（CGo有効時）
-brew install libarchive p7zip
-
-# ビルド（src/ 内で実行）
+# ビルド（CGo不要、クロスプラットフォーム）
 cd src
-CGO_ENABLED=1 go build -o ../skittles .
+go build -o ../skittles .
 cd ..
-go vet ./src/...                     # 静的解析
-golangci-lint run ./src/...          # Lint（0 issues）
-
-# 非CGoビルド（外部コマンド依存）
-cd src && CGO_ENABLED=0 go build -o ../skittles .
+go vet ./...                         # 静的解析
+golangci-lint run ./...              # Lint（0 issues）
 
 # クロスコンパイル
 GOOS=linux GOARCH=amd64 go build -o skittles-linux .
@@ -222,3 +215,4 @@ Apache License 2.0
 - [lipgloss](https://github.com/charmbracelet/lipgloss) — スタイリング
 - [glamour](https://github.com/charmbracelet/glamour) — Markdown レンダリング
 - [chroma](https://github.com/alecthomas/chroma) — シンタックスハイライト
+- [sevenzip](https://github.com/bodgit/sevenzip) — 7z アーカイブリーダー

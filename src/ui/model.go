@@ -488,12 +488,12 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "p":
 		cur := p.Current()
 		if cur != nil && !cur.IsDir {
-			_ = exec.Command("open", cur.Path).Run()
+			_ = openFile(cur.Path)
 		}
 	case "x":
 		cur := p.Current()
 		if cur != nil && !cur.IsDir {
-			cmd := extractCmdFor(cur.Path)
+			cmd := fs.ExtractCmdFor(cur.Path)
 			if cmd != "" {
 				out := m.runAction(actions.Action{Command: fmt.Sprintf("%s $P", cmd)}, cur.Path)
 				if out != "" {
@@ -582,31 +582,6 @@ func isBinaryData(data []byte) bool {
 
 func renderHexView(data []byte) []string {
 	return fs.RenderHexView(data)
-}
-
-func extractCmdFor(path string) string {
-	ext := strings.ToLower(filepath.Ext(path))
-	switch ext {
-	case ".zip":
-		return "unzip -o $P"
-	case ".tar":
-		return "tar xf $P"
-	case ".tgz", ".gz":
-		if strings.HasSuffix(strings.ToLower(path), ".tar.gz") {
-			return "tar xzf $P"
-		}
-		return "gunzip -c $P > ${P%.*}"
-	case ".bz2":
-		return "bunzip2 -c $P > ${P%.*}"
-	case ".lzh", ".lha":
-		return "lha x $P"
-	case ".rar":
-		return "unrar x $P"
-	case ".7z":
-		return "7z x $P"
-	default:
-		return ""
-	}
 }
 
 func consoleOutputCmd(ch chan string) tea.Cmd {

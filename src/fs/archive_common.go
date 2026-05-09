@@ -3,6 +3,7 @@ package fs
 import (
 	"archive/tar"
 	"archive/zip"
+	"compress/bzip2"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -10,6 +11,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/bodgit/sevenzip"
 )
 
 func extractZip(src, dest string) error {
@@ -20,32 +23,36 @@ func extractZip(src, dest string) error {
 	defer func() { _ = r.Close() }()
 
 	for _, f := range r.File {
-		target := filepath.Join(dest, f.Name)
-		if !strings.HasPrefix(target, filepath.Clean(dest)+string(os.PathSeparator)) {
-			continue
-		}
-		if f.FileInfo().IsDir() {
-			_ = os.MkdirAll(target, 0755)
-			continue
-		}
-		_ = os.MkdirAll(filepath.Dir(target), 0755)
-		rc, err := f.Open()
-		if err != nil {
-			return fmt.Errorf("open entry %s: %w", f.Name, err)
-		}
-		out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-		if err != nil {
-			_ = rc.Close()
-			return fmt.Errorf("create %s: %w", f.Name, err)
-		}
-		_, err = io.Copy(out, rc)
-		_ = rc.Close()
-		_ = out.Close()
-		if err != nil {
-			return fmt.Errorf("write %s: %w", f.Name, err)
+		if err := extractZipEntry(f, dest); err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+func extractZipEntry(f *zip.File, dest string) error {
+	target := filepath.Join(dest, f.Name)
+	if !strings.HasPrefix(target, filepath.Clean(dest)+string(os.PathSeparator)) {
+		return nil
+	}
+	if f.FileInfo().IsDir() {
+		return os.MkdirAll(target, 0755)
+	}
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		return err
+	}
+	rc, err := f.Open()
+	if err != nil {
+		return fmt.Errorf("open %s: %w", f.Name, err)
+	}
+	defer func() { _ = rc.Close() }()
+	out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+	if err != nil {
+		return fmt.Errorf("create %s: %w", f.Name, err)
+	}
+	defer func() { _ = out.Close() }()
+	_, err = io.Copy(out, rc)
+	return err
 }
 
 func extractTar(src, dest string) error {
@@ -69,6 +76,16 @@ func extractTarGz(src, dest string) error {
 	}
 	defer func() { _ = gr.Close() }()
 	return untar(gr, dest)
+}
+
+func extractTarBz2(src, dest string) error {
+	f, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("open tbz2: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+	bzr := bzip2.NewReader(f)
+	return untar(bzr, dest)
 }
 
 func untar(r io.Reader, dest string) error {
@@ -125,6 +142,61 @@ func extractGz(src, dest string) error {
 	defer func() { _ = out.Close() }()
 	_, err = io.Copy(out, gr)
 	return err
+}
+
+func extractBz2(src, dest string) error {
+	f, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("open bz2: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+	bzr := bzip2.NewReader(f)
+
+	outName := filepath.Base(strings.TrimSuffix(src, ".bz2"))
+	target := filepath.Join(dest, outName)
+	out, err := os.Create(target)
+	if err != nil {
+		return fmt.Errorf("create %s: %w", outName, err)
+	}
+	defer func() { _ = out.Close() }()
+	_, err = io.Copy(out, bzr)
+	return err
+}
+
+func extractSevenZip(src, dest string) error {
+	r, err := sevenzip.OpenReader(src)
+	if err != nil {
+		return fmt.Errorf("open 7z: %w", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	for _, f := range r.File {
+		target := filepath.Join(dest, f.Name)
+		if !strings.HasPrefix(target, filepath.Clean(dest)+string(os.PathSeparator)) {
+			continue
+		}
+		if f.FileInfo().IsDir() {
+			_ = os.MkdirAll(target, 0755)
+			continue
+		}
+		_ = os.MkdirAll(filepath.Dir(target), 0755)
+		rc, err := f.Open()
+		if err != nil {
+			return fmt.Errorf("open 7z entry %s: %w", f.Name, err)
+		}
+		out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.FileInfo().Mode())
+		if err != nil {
+			_ = rc.Close()
+			return fmt.Errorf("create %s: %w", f.Name, err)
+		}
+		_, err = io.Copy(out, rc)
+		_ = rc.Close()
+		_ = out.Close()
+		if err != nil {
+			return fmt.Errorf("write %s: %w", f.Name, err)
+		}
+	}
+	return nil
 }
 
 func extractUsing(src, dest, tool string, args ...string) error {

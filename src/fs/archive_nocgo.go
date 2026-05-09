@@ -1,5 +1,3 @@
-//go:build !cgo
-
 package fs
 
 import (
@@ -33,14 +31,19 @@ func ExtractToTemp(src string) (string, error) {
 		} else {
 			err = extractGz(src, dest)
 		}
-	case ".bz2":
-		err = extractUsing(src, dest, "bunzip2", "-c")
+	case ".tbz2", ".bz2":
+		if strings.HasSuffix(strings.ToLower(src), ".tar.bz2") ||
+			strings.HasSuffix(strings.ToLower(src), ".tbz2") {
+			err = extractTarBz2(src, dest)
+		} else {
+			err = extractBz2(src, dest)
+		}
+	case ".7z":
+		err = extractSevenZip(src, dest)
 	case ".lzh", ".lha":
 		err = extractUsing(src, dest, "lha", "x")
 	case ".rar":
 		err = extractUsing(src, dest, "unrar", "x")
-	case ".7z":
-		err = extractUsing(src, dest, "7z", "x")
 	default:
 		err = fmt.Errorf("unsupported archive: %s", ext)
 	}
@@ -50,4 +53,29 @@ func ExtractToTemp(src string) (string, error) {
 		return "", err
 	}
 	return dest, nil
+}
+
+func ExtractCmdFor(path string) string {
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".zip":
+		return "unzip -o $P"
+	case ".tar":
+		return "tar xf $P"
+	case ".tgz", ".gz":
+		if strings.HasSuffix(strings.ToLower(path), ".tar.gz") {
+			return "tar xzf $P"
+		}
+		return "gunzip -c $P > ${P%.*}"
+	case ".bz2":
+		return "bunzip2 -c $P > ${P%.*}"
+	case ".lzh", ".lha":
+		return "lha x $P"
+	case ".rar":
+		return "unrar x $P"
+	case ".7z":
+		return "7z x $P"
+	default:
+		return ""
+	}
 }
