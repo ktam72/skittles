@@ -467,13 +467,16 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "left", "h":
 		if p.Dir != "/" {
-			if p.IsArchive {
+			if p.IsArchive && p.Dir == p.ArchiveRoot {
 				_ = os.RemoveAll(p.Dir)
 				p.IsArchive = false
 				p.ArchivePath = ""
 				p.ArchiveRoot = ""
 				_ = p.Chdir(p.RealDir)
 				p.RealDir = ""
+			} else if p.IsArchive {
+				parent := filepath.Dir(strings.TrimRight(p.Dir, "/"))
+				_ = p.Chdir(parent)
 			} else {
 				parent := filepath.Dir(strings.TrimRight(p.Dir, "/"))
 				_ = p.Chdir(parent)
@@ -488,13 +491,16 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		p.Down(1)
 	case "backspace", "bs":
 		if p.Dir != "/" {
-			if p.IsArchive {
+			if p.IsArchive && p.Dir == p.ArchiveRoot {
 				_ = os.RemoveAll(p.Dir)
 				p.IsArchive = false
 				p.ArchivePath = ""
 				p.ArchiveRoot = ""
 				_ = p.Chdir(p.RealDir)
 				p.RealDir = ""
+			} else if p.IsArchive {
+				parent := filepath.Dir(strings.TrimRight(p.Dir, "/"))
+				_ = p.Chdir(parent)
 			} else {
 				parent := filepath.Dir(strings.TrimRight(p.Dir, "/"))
 				_ = p.Chdir(parent)
