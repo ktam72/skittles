@@ -156,26 +156,55 @@ func (c *Console) RenderBody(cursorOn bool) string {
 		cursor = "█"
 	}
 
-	w := c.Width - 2
-	lineFmt := fmt.Sprintf(" %%-%ds\n", w-1)
+	w := c.Width - 3
+
+	// scrollbar
+	totalH := len(c.Output)
+	barH := outH
+	thumbH := 1
+	if totalH > barH {
+		thumbH = max(1, barH*barH/totalH)
+	}
+	thumbPos := 0
+	if totalH > barH {
+		thumbPos = (c.Scroll - outH) * (barH - thumbH) / (totalH - barH)
+		if thumbPos < 0 {
+			thumbPos = 0
+		}
+	}
+
+	lineFmt := fmt.Sprintf(" %%-%ds", w-1)
 
 	var body strings.Builder
 	start := c.Scroll - outH
 	if start < 0 {
 		start = 0
 	}
-	for i := start; i < len(c.Output) && i < start+outH; i++ {
-		line := c.Output[i]
-		if len(line) > w-2 {
-			line = line[:w-5] + "..."
-		}
-		fmt.Fprintf(&body, lineFmt, line)
+
+	// output lines (outH-1 rows)
+	maxOut := outH - 1
+	if maxOut < 0 {
+		maxOut = 0
 	}
-	remain := outH - (len(c.Output) - start)
-	for i := 0; i < remain; i++ {
-		body.WriteString(strings.Repeat(" ", w) + "\n")
+	for i := 0; i < maxOut; i++ {
+		idx := start + i
+		if idx < len(c.Output) {
+			line := c.Output[idx]
+			if len(line) > w-2 {
+				line = line[:w-5] + "..."
+			}
+			fmt.Fprintf(&body, lineFmt, line)
+		} else {
+			fmt.Fprintf(&body, lineFmt, "")
+		}
+		if i >= thumbPos && i < thumbPos+thumbH {
+			body.WriteString("█\n")
+		} else {
+			body.WriteString("│\n")
+		}
 	}
 
+	// prompt line (last row)
 	text := string(c.Input)
 	prompt := fmt.Sprintf(" %s $ %s%s", c.Dir, text, cursor)
 	if len(prompt) > w-1 {
@@ -186,7 +215,22 @@ func (c *Console) RenderBody(cursorOn bool) string {
 			prompt = short
 		}
 	}
-	body.WriteString(prompt)
+	fmt.Fprintf(&body, "%-*s", w-1, prompt)
+	totalH = len(c.Output)
+	if totalH > 0 {
+		ratio := float64(c.Scroll) / float64(totalH)
+		barPos := int(ratio * float64(outH))
+		if barPos >= outH {
+			barPos = outH - 1
+		}
+		if barPos == maxOut {
+			body.WriteString("█")
+		} else {
+			body.WriteString("│")
+		}
+	} else {
+		body.WriteString("│")
+	}
 	return body.String()
 }
 
