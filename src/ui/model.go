@@ -703,11 +703,20 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		p.SortBy = cycle[idx]
 		p.Reload()
 
-	case "E":
+	case "e", "E":
 		cur := p.Current()
 		if cur != nil {
 			switchToEnglishInput()
-			m.runAction(actions.Action{Command: fmt.Sprintf("%s $P", m.editor)}, cur.Path)
+			_ = m.runAction(actions.Action{Command: fmt.Sprintf("%s $P", m.editor)}, cur.Path)
+		}
+
+	case "i", "I":
+		cur := p.Current()
+		if cur != nil {
+			info := formatFileInfo(cur)
+			m.confirmMessage = info
+			m.confirmAction = nil
+			m.mode = ModeConfirm
 		}
 
 	case "!":
@@ -764,6 +773,20 @@ func isBinaryData(data []byte) bool {
 
 func renderHexView(data []byte) []string {
 	return fs.RenderHexView(data)
+}
+
+func formatFileInfo(e *fs.Entry) string {
+	kind := "file"
+	if e.IsDir {
+		kind = "directory"
+	}
+	if e.IsLink {
+		kind = "symlink"
+	}
+	perm := os.FileMode.Perm(e.Mode)
+	permStr := fmt.Sprintf("%o", perm)
+	return fmt.Sprintf("Name: %s\nPath: %s\nType: %s\nPerm: %s (%04o)\nSize: %d bytes\nOwner: %s\nGroup: %s\nModified: %s",
+		e.Name, e.Path, kind, permStr, perm, e.Size, e.Owner, e.Group, e.ModTime.Format("2006-01-02 15:04:05"))
 }
 
 func consoleOutputCmd(ch chan string) tea.Cmd {

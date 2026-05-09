@@ -171,19 +171,23 @@ func (m *Model) renderWithRename(topBar string) string {
 }
 
 func (m *Model) renderWithConfirm(topBar string) string {
-	// dialog
-	opts := []string{
-		" 1. OK（毎回確認する）",
-		" 2. OK（以降確認しない）",
-		" 3. キャンセル",
+	var content string
+	if m.confirmAction == nil {
+		content = fmt.Sprintf("\n%s\n\n", m.confirmMessage)
+	} else {
+		opts := []string{
+			" 1. OK（毎回確認する）",
+			" 2. OK（以降確認しない）",
+			" 3. キャンセル",
+		}
+		optStr := strings.Join(opts, "\n")
+		content = fmt.Sprintf("\n%s\n\n%s\n", m.confirmMessage, optStr)
 	}
-	optStr := strings.Join(opts, "\n")
-	content := fmt.Sprintf("\n%s\n\n%s\n", m.confirmMessage, optStr)
 	dialog := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("9")).
 		Padding(1, 2).
-		Width(40).
+		Width(50).
 		Render(content)
 	dialogH := strings.Count(dialog, "\n") + 3 // + border top/bottom extra spacing
 
