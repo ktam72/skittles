@@ -199,6 +199,16 @@ func extractSevenZip(src, dest string) error {
 	return nil
 }
 
+func extractRar(src, dest string) error {
+	cmd := exec.Command("unar", "-o", dest, "-D", "-q", src)
+	cmd.Dir = dest
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("unar: %v\n%s", err, string(out))
+	}
+	return nil
+}
+
 func extractUsing(src, dest, tool string, args ...string) error {
 	all := append(args, src)
 	cmd := exec.Command(tool, all...)
