@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -200,6 +201,14 @@ func extractSevenZip(src, dest string) error {
 }
 
 func extractRar(src, dest string) error {
+	err := extractRarPure(src, dest)
+	if err == nil {
+		return nil
+	}
+	return extractRarFallback(src, dest)
+}
+
+func extractRarPure(src, dest string) error {
 	f, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("open rar: %w", err)
@@ -208,7 +217,7 @@ func extractRar(src, dest string) error {
 
 	rr, err := rardecode.NewReader(f)
 	if err != nil {
-		return fmt.Errorf("rar reader: %w", err)
+		return err
 	}
 
 	for {
@@ -217,7 +226,7 @@ func extractRar(src, dest string) error {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("rar read: %w", err)
+			return err
 		}
 		target := filepath.Join(dest, hdr.Name)
 		if !strings.HasPrefix(target, filepath.Clean(dest)+string(os.PathSeparator)) {
@@ -235,8 +244,18 @@ func extractRar(src, dest string) error {
 		_, err = io.Copy(out, rr)
 		_ = out.Close()
 		if err != nil {
-			return fmt.Errorf("write %s: %w", hdr.Name, err)
+			return err
 		}
+	}
+	return nil
+}
+
+func extractRarFallback(src, dest string) error {
+	cmd := exec.Command("unar", "-o", dest, "-D", "-q", src)
+	cmd.Dir = dest
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("unar: %v\n%s", err, string(out))
 	}
 	return nil
 }
