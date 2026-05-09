@@ -49,9 +49,24 @@ go install github.com/ktam72/skittles@latest
 ```bash
 git clone git@github.com:ktam72/skittles.git
 cd skittles
+
+# 依存パッケージ（CGoビルドに必要）
+brew install libarchive p7zip
+
+# ビルド
 go build -o skittles .
 ./skittles
 ```
+
+#### アーカイブ形式対応と依存
+
+| 形式 | CGo有効（推奨） | CGo無効（`CGO_ENABLED=0`） |
+|------|----------------|---------------------------|
+| ZIP/TAR/GZ | Homebrew libarchive | Go標準ライブラリ（依存不要） |
+| 7z/LZH/RAR | **p7zip**（フォールバック） | 外部コマンド（`7z`/`lha`/`unrar`） |
+| BZ2 | Homebrew libarchive | 外部コマンド（`bunzip2`） |
+
+CGo無効の場合は `brew install p7zip lha unrar` 等が必要です。
 
 ## 使い方
 
