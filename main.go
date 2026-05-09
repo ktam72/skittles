@@ -12,7 +12,7 @@ import (
 func main() {
 	switchToEnglishInput()
 
-	cfg, err := loadConfig("../config.yaml")
+	cfg, err := loadConfig("config.yaml")
 	if err != nil {
 		cfg = &Config{Editor: "vim"}
 	}
