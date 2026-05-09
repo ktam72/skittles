@@ -7,19 +7,6 @@ X68000 用ファイラー [mint.x](https://opencode.ai) の設計思想を継承
 ![Skittles Screenshot](screens/screen2.png)
 ![Skittles Screenshot](screens/screen3.png)
 
-```
-┌─ Skittles v0.1.0 ─────────── 2026/05/09 12:34:56 ─┐
-├─ Left Pane ────────┬─ Right Pane ───────┐
-│  📁 drwxr-xr-x Documents  │  📁 drwxr-xr-x Downloads  │
-│  📄 -rw-r--r-- main.go    │  📄 -rw-r--r-- data.json  │
-├────────────────────┴─────────────────────┤
-│ Console                                  │
-│ > ls -la                                 │
-├──────────────────────────────────────────┤
-│ ↑↓:nav | Enter:open | Tab:focus(3-pane) │
-└──────────────────────────────────────────┘
-```
-
 ## 特徴
 
 - **2画面 + コンソール の3ペイン**: Tab でフォーカス切替、アクティブペインが source、反対が destination
