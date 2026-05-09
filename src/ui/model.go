@@ -305,7 +305,7 @@ func (m *Model) handleViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.viewerOff = maxOff
 		}
 	case tea.KeyRunes:
-		if string(msg.Runes) == "E" {
+		if string(msg.Runes) == "e" || string(msg.Runes) == "E" {
 			editor := os.Getenv("EDITOR")
 			if editor == "" {
 				editor = "vim"
