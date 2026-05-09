@@ -33,7 +33,7 @@ func NewConsole(width, height int) *Console {
 		Width:         width,
 		Height:        height,
 		Dir:           dir,
-		maxOutputBytes: 10240,
+		maxOutputBytes: 102400,
 	}
 }
 
