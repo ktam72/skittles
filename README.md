@@ -3,8 +3,9 @@
 X68000 用ファイラー [mint.x](https://opencode.ai) の設計思想を継承した、
 モダンな 2画面 TUI ファイルマネージャ。
 
-![Skittles Screenshot](screens/screen3.png)
+![Skittles Screenshot](screens/screen1.png)
 ![Skittles Screenshot](screens/screen2.png)
+![Skittles Screenshot](screens/screen3.png)
 
 ```
 ┌─ Skittles v0.1.0 ─────────── 2026/05/09 12:34:56 ─┐
