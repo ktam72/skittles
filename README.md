@@ -112,6 +112,9 @@ CGo無効の場合は `brew install p7zip lha unrar` 等が必要です。
 | `PgUp / PgDown` | 1ページスクロール |
 | `ESC` | 閉じる |
 
+> **MacのBackspace**: `delete` キー（Returnキーの上）が Backspace として動作します。
+> Space キーでもマークできるので、そちらもご利用ください。
+
 ## 設定
 
 `config.yaml` で拡張子ごとのアクションをカスタマイズできます。
