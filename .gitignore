@@ -4,3 +4,4 @@ skittles
 .DS_Store
 dist/
 *.swp
+*.profraw
