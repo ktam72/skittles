@@ -1,6 +1,6 @@
 # Skittles
 
-Two-pane file manager with a terminal window.
+Dual-pane file manager with a terminal window.
 
 2画面ファイラーにターミナル画面をくっつけたツールです。
 
