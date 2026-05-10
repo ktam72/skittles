@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ktam72/skittles/src/fs"
+	"github.com/ktam72/skittles/v2/src/fs"
 	"github.com/charmbracelet/lipgloss"
 )
 

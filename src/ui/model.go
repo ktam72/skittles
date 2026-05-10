@@ -10,9 +10,9 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"github.com/ktam72/skittles/v2/src/actions"
 
-	"github.com/ktam72/skittles/src/actions"
-	"github.com/ktam72/skittles/src/fs"
+	"github.com/ktam72/skittles/v2/src/fs"
 
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/quick"
