@@ -258,7 +258,7 @@ var extActions = map[string]Action{
 	".gif":  {Command: "open $P"},
 	".bmp":  {Command: "open $P"},
 	".webp": {Command: "open $P"},
-	".mdx":  {Command: "/Applications/MP4M.app/Contents/MacOS/MP4M $P"},
+	".mdx":  {Command: "/Applications/MP4M.app/Contents/MacOS/MP4M --file=$P"},
 	".zip":  {Browse: true},
 	".tar":  {Browse: true},
 	".tgz":  {Browse: true},
