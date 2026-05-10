@@ -418,6 +418,8 @@ GOOS=linux GOARCH=amd64 go build -o skittles-linux .
 
 ```bash
 go install github.com/ktam72/skittles/v2@v2.5.0
+# アンインストール
+# rm -f $(go env GOPATH)/bin/skittles
 # または
 git clone ... && cd skittles && go build -o skittles . && ./skittles
 ```

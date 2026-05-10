@@ -39,6 +39,12 @@ golangci-lintで検出した問題を潰してあります。
 go install github.com/ktam72/skittles/v2@v2.5.0
 ```
 
+#### アンインストール
+
+```bash
+rm -f $(go env GOPATH)/bin/skittles
+```
+
 ### 手動ビルド
 
 ```bash
