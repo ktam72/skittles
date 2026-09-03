@@ -9,27 +9,27 @@ import (
 type consoleOutputMsg string
 
 type Console struct {
-	Output       []string
-	Input        []rune
-	Cursor       int
-	Dir          string
-	History      []string
-	HistoryPos   int
-	Scroll       int
-	Active       bool
-	Width        int
-	Height       int
-	outputCh     chan string
-	outputBytes  int
+	Output         []string
+	Input          []rune
+	Cursor         int
+	Dir            string
+	History        []string
+	HistoryPos     int
+	Scroll         int
+	Active         bool
+	Width          int
+	Height         int
+	outputCh       chan string
+	outputBytes    int
 	maxOutputBytes int
 }
 
 func NewConsole(width, height int) *Console {
 	dir, _ := os.Getwd()
 	return &Console{
-		Width:         width,
-		Height:        height,
-		Dir:           dir,
+		Width:          width,
+		Height:         height,
+		Dir:            dir,
 		maxOutputBytes: 102400,
 	}
 }
@@ -54,7 +54,7 @@ func (c *Console) Exec(cmdLine string) {
 
 	go func() {
 		defer close(outputCh)
-		runExec(parts, cmdLine, c.Dir, c)
+		runExec(parts, cmdLine, c.Dir, c, outputCh)
 	}()
 }
 
@@ -112,15 +112,17 @@ func (c *Console) RenderBody(cursorOn bool) string {
 	lineFmt := fmt.Sprintf(" %%-%ds", w-1)
 
 	var body strings.Builder
-	start := c.Scroll - outH
-	if start < 0 {
-		start = 0
-	}
 
-	// output lines (outH-1 rows)
+	// output lines (outH-1 rows; 最終行はプロンプト行が使う)
 	maxOut := outH - 1
 	if maxOut < 0 {
 		maxOut = 0
+	}
+	// 表示可能行数は maxOut。start を outH 基準にすると最新の 1 行が
+	// 常に描画範囲外へ落ちるので maxOut 基準で算出する。
+	start := c.Scroll - maxOut
+	if start < 0 {
+		start = 0
 	}
 	for i := 0; i < maxOut; i++ {
 		idx := start + i

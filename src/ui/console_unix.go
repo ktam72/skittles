@@ -57,47 +57,40 @@ func handleCdBuiltin(parts []string, c *Console) bool {
 	return true
 }
 
-func runExec(parts []string, cmdLine string, dir string, c *Console) {
-	outputCh := make(chan string, 100)
-	c.outputCh = outputCh
+func runExec(parts []string, cmdLine string, dir string, c *Console, outputCh chan string) {
+	cmd := exec.Command(parts[0], parts[1:]...)
+	cmd.Dir = dir
 
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		outputCh <- fmt.Sprintf("error: %v", err)
+		return
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		outputCh <- fmt.Sprintf("error: %v", err)
+		return
+	}
+
+	if err := cmd.Start(); err != nil {
+		outputCh <- fmt.Sprintf("error: %v", err)
+		return
+	}
+
+	done := make(chan struct{})
 	go func() {
-		defer close(outputCh)
-
-		cmd := exec.Command(parts[0], parts[1:]...)
-		cmd.Dir = dir
-
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			outputCh <- fmt.Sprintf("error: %v", err)
-			return
+		sc := bufio.NewScanner(stdout)
+		for sc.Scan() {
+			outputCh <- sc.Text()
 		}
-		stderr, err := cmd.StderrPipe()
-		if err != nil {
-			outputCh <- fmt.Sprintf("error: %v", err)
-			return
-		}
-
-		if err := cmd.Start(); err != nil {
-			outputCh <- fmt.Sprintf("error: %v", err)
-			return
-		}
-
-		done := make(chan struct{})
-		go func() {
-			sc := bufio.NewScanner(stdout)
-			for sc.Scan() {
-				outputCh <- sc.Text()
-			}
-			close(done)
-		}()
-
-		scErr := bufio.NewScanner(stderr)
-		for scErr.Scan() {
-			outputCh <- scErr.Text()
-		}
-
-		<-done
-		_ = cmd.Wait()
+		close(done)
 	}()
+
+	scErr := bufio.NewScanner(stderr)
+	for scErr.Scan() {
+		outputCh <- scErr.Text()
+	}
+
+	<-done
+	_ = cmd.Wait()
 }
