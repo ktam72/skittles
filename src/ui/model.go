@@ -3,6 +3,7 @@ package ui
 import (
 	"bytes"
 	"fmt"
+	"github.com/ktam72/skittles/v2/src/actions"
 	"io"
 	"os"
 	"os/exec"
@@ -10,7 +11,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"github.com/ktam72/skittles/v2/src/actions"
 
 	"github.com/ktam72/skittles/v2/src/fs"
 
@@ -39,7 +39,7 @@ func extractArchiveCmd(src string) tea.Cmd {
 	}
 }
 
-const version = "2.5.0-win"
+const version = "2.6.0"
 
 type Mode int
 

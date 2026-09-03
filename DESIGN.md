@@ -81,11 +81,11 @@ Tab キーで Left → Right → Console → Left と巡回。アクティブペ
 
 ### 2. トップバー
 
-画面上端に常時表示。アプリ名 `Skittles v2.5.0`（左）と現在日時（右）を太字・紺背景で表示。
+画面上端に常時表示。アプリ名 `Skittles v2.6.0`（左）と現在日時（右）を太字・紺背景で表示。
 時計は `tea.Tick(time.Second)` による定期購読で1秒ごとに更新。
 
 ```
-Skittles v2.5.0                                2026/05/09 12:34:56
+Skittles v2.6.0                                2026/05/09 12:34:56
 ```
 
 ### 3. 暗黙の source/destination コンテキスト
@@ -417,7 +417,7 @@ GOOS=linux GOARCH=amd64 go build -o skittles-linux .
 ### インストール
 
 ```bash
-go install github.com/ktam72/skittles/v2@v2.5.0
+go install github.com/ktam72/skittles/v2@v2.6.0
 # アンインストール
 # rm -f $(go env GOPATH)/bin/skittles
 # または
