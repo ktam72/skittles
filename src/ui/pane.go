@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/ktam72/skittles/v2/src/fs"
+	"github.com/mattn/go-runewidth"
 )
 
 type RowInfo struct {
@@ -207,10 +208,15 @@ func (p *Pane) RenderHeader() string {
 	if p.Filter != "" {
 		dir += fmt.Sprintf(" [Filter: %s, Fで解除]", p.Filter)
 	}
-	if len(dir) > p.Width-2 {
-		dir = "..." + dir[len(dir)-(p.Width-5):]
+	maxW := p.Width - 2
+	if runewidth.StringWidth(dir) > maxW {
+		dir = "..." + truncateTail(dir, maxW-3)
 	}
-	return fmt.Sprintf(" %-*s ", p.Width-1, dir)
+	pad := maxW - runewidth.StringWidth(dir)
+	if pad > 0 {
+		dir += strings.Repeat(" ", pad)
+	}
+	return " " + dir + " "
 }
 
 func (p *Pane) RenderRows() []RowInfo {
@@ -267,18 +273,22 @@ func (p *Pane) formatEntryLine(e *fs.Entry) string {
 		size = formatSize(e.Size)
 	}
 
-	fixed := len(icon) + 1 + 10 + 1 + 8 + 1 + 8 + 1 + 1 + 8
+	fixed := runewidth.StringWidth(icon) + 1 + 10 + 1 + 8 + 1 + 8 + 1 + 1 + 8
 	nameWidth := p.Width - fixed
 	if nameWidth < 3 {
 		nameWidth = 3
 	}
 
 	name := e.Name
-	if len(name) > nameWidth {
-		name = name[:nameWidth-1] + "…"
+	if runewidth.StringWidth(name) > nameWidth {
+		name = truncateHead(name, nameWidth-1) + "…"
+	}
+	pad := nameWidth - runewidth.StringWidth(name)
+	if pad > 0 {
+		name += strings.Repeat(" ", pad)
 	}
 
-	return fmt.Sprintf("%s %s %-8s %-8s %-*s %8s", icon, perm, owner, group, nameWidth, name, size)
+	return fmt.Sprintf("%s %s %-8s %-8s %s %8s", icon, perm, owner, group, name, size)
 }
 
 func formatPerm(mode os.FileMode) string {
@@ -344,4 +354,43 @@ func formatSize(n int64) string {
 	default:
 		return fmt.Sprintf("%d", n)
 	}
+}
+
+// truncateHead は s の先頭から表示幅（セル数）が limit を超えない範囲を返す。
+// 全角文字を途中で切らないよう rune 単位で幅を累積する。
+func truncateHead(s string, limit int) string {
+	var sb strings.Builder
+	w := 0
+	for _, r := range s {
+		rw := runewidth.RuneWidth(r)
+		if w+rw > limit {
+			break
+		}
+		sb.WriteRune(r)
+		w += rw
+	}
+	return sb.String()
+}
+
+// truncateTail は s の末尾側を表示幅（セル数）が limit を超えない範囲で返す。
+func truncateTail(s string, limit int) string {
+	if runewidth.StringWidth(s) <= limit {
+		return s
+	}
+	runes := []rune(s)
+	var sb strings.Builder
+	w := 0
+	for i := len(runes) - 1; i >= 0; i-- {
+		rw := runewidth.RuneWidth(runes[i])
+		if w+rw > limit {
+			break
+		}
+		sb.WriteRune(runes[i])
+		w += rw
+	}
+	rev := []rune(sb.String())
+	for i, j := 0, len(rev)-1; i < j; i, j = i+1, j-1 {
+		rev[i], rev[j] = rev[j], rev[i]
+	}
+	return string(rev)
 }

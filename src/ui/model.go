@@ -39,7 +39,7 @@ func extractArchiveCmd(src string) tea.Cmd {
 	}
 }
 
-const version = "2.6.0"
+const version = "2.7.0"
 
 type Mode int
 
@@ -49,6 +49,7 @@ const (
 	ModeQuit
 	ModeConfirm
 	ModeRename
+	ModeMkdir
 	ModeFilter
 	ModeChmod
 	ModeFileSearch
@@ -80,6 +81,9 @@ type Model struct {
 
 	renamePath  string
 	renameInput []rune
+
+	mkdirDir   string
+	mkdirInput []rune
 
 	filterInput       []rune
 	fileSearchPattern []rune
@@ -221,6 +225,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case ModeRename:
 			return m.handleRenameMode(msg)
 
+		case ModeMkdir:
+			return m.handleMkdirMode(msg)
+
 		case ModeFilter:
 			return m.handleFilterMode(msg)
 
@@ -297,6 +304,38 @@ func (m *Model) handleRenameMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	default:
 		if !msg.Alt && len(msg.String()) == 1 {
 			m.renameInput = append(m.renameInput, []rune(msg.String())...)
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) handleMkdirMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.mode = ModeBrowse
+		m.mkdirInput = nil
+	case tea.KeyEnter:
+		name := strings.TrimSpace(string(m.mkdirInput))
+		if name != "" {
+			if !isValidPathSafe(name) {
+				m.err = fmt.Errorf("ディレクトリ名に / または \\ は使用できません")
+			} else {
+				path := filepath.Join(m.mkdirDir, name)
+				if err := fs.Mkdir(path); err != nil {
+					m.err = err
+				}
+				m.FocusedPane().Reload()
+			}
+		}
+		m.mode = ModeBrowse
+		m.mkdirInput = nil
+	case tea.KeyBackspace:
+		if len(m.mkdirInput) > 0 {
+			m.mkdirInput = m.mkdirInput[:len(m.mkdirInput)-1]
+		}
+	default:
+		if !msg.Alt && len(msg.String()) == 1 {
+			m.mkdirInput = append(m.mkdirInput, []rune(msg.String())...)
 		}
 	}
 	return m, nil
@@ -858,7 +897,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.loadViewerBuffer()
 				m.mode = ModeView
 			} else if act.Command != "" {
-				out := m.runAction(act, cur.Path)
+				out := m.runAction(act, cur.Path, "")
 				if out != "" {
 					for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
 						m.Console.AddOutput(line)
@@ -989,7 +1028,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if cur != nil && !cur.IsDir {
 			cmd := fs.ExtractCmdFor(cur.Path)
 			if cmd != "" {
-				out := m.runAction(actions.Action{Command: fmt.Sprintf("%s $P", cmd)}, cur.Path)
+				out := m.runAction(actions.Action{Command: cmd}, cur.Path, opp.Dir)
 				if out != "" {
 					for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
 						m.Console.AddOutput(line)
@@ -1016,6 +1055,14 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		p.SortBy = cycle[idx]
 		p.Reload()
+
+	case "M":
+		p := m.FocusedPane()
+		if p != nil {
+			m.mkdirDir = p.Dir
+			m.mkdirInput = nil
+			m.mode = ModeMkdir
+		}
 
 	case "e", "E":
 		cur := p.Current()
@@ -1091,7 +1138,7 @@ func (m *Model) handleBrowseMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) runAction(act actions.Action, path string) string {
+func (m *Model) runAction(act actions.Action, path string, dir string) string {
 	editor := m.editor
 	if editor == "" {
 		editor = "vim"
@@ -1123,6 +1170,9 @@ func (m *Model) runAction(act actions.Action, path string) string {
 	fmt.Fprintf(os.Stderr, "\n[runAction] bin=%q args=%q\n", resolved[0], resolved[1:])
 
 	cmd := exec.Command(resolved[0], resolved[1:]...)
+	if dir != "" {
+		cmd.Dir = dir
+	}
 	_ = cmd.Start()
 	_ = cmd.Process.Release()
 

@@ -54,7 +54,7 @@ func Delete(path string) error {
 }
 
 func Mkdir(path string) error {
-	return os.MkdirAll(path, 0755)
+	return os.Mkdir(path, 0755)
 }
 
 func Touch(path string) error {

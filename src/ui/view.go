@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ktam72/skittles/v2/src/fs"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ktam72/skittles/v2/src/fs"
 )
 
 var (
@@ -16,12 +16,12 @@ var (
 			Bold(true)
 
 	activePaneStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
+			Border(lipgloss.DoubleBorder()).
 			BorderForeground(lipgloss.Color("63")).
 			Bold(false)
 
 	activeArchivePaneStyle = lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
+				Border(lipgloss.DoubleBorder()).
 				BorderForeground(lipgloss.Color("205")).
 				Bold(false)
 
@@ -30,7 +30,7 @@ var (
 				BorderForeground(lipgloss.Color("240"))
 
 	activeConsoleStyle = lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
+				Border(lipgloss.DoubleBorder()).
 				BorderForeground(lipgloss.Color("63"))
 
 	inactiveConsoleStyle = lipgloss.NewStyle().
@@ -57,7 +57,7 @@ var (
 			Foreground(lipgloss.Color("253"))
 
 	archiveFileStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("218"))
+				Foreground(lipgloss.Color("218"))
 
 	markedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("15")).
@@ -67,15 +67,15 @@ var (
 			Background(lipgloss.Color("24"))
 
 	cursorArchiveStyle = lipgloss.NewStyle().
-			Background(lipgloss.Color("53"))
+				Background(lipgloss.Color("53"))
 
 	cursorDirStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("81")).
 			Background(lipgloss.Color("24"))
 
 	cursorArchiveDirStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("219")).
-			Background(lipgloss.Color("53"))
+				Foreground(lipgloss.Color("219")).
+				Background(lipgloss.Color("53"))
 
 	cursorMarkedStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("15")).
@@ -104,6 +104,9 @@ func (m *Model) View() string {
 	}
 	if m.mode == ModeRename {
 		return m.renderWithRename(topBar)
+	}
+	if m.mode == ModeMkdir {
+		return m.renderWithMkdir(topBar)
 	}
 	if m.mode == ModeFilter {
 		return m.renderWithFilter(topBar)
@@ -158,6 +161,44 @@ func (m *Model) renderWithRename(topBar string) string {
 	}
 	current := string(m.renameInput) + cursor
 	content := fmt.Sprintf("Rename:\n  %s\n\nto:\n  %s\n", base, current)
+	dialog := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("63")).
+		Padding(1, 2).
+		Width(50).
+		Render(content)
+	dialogH := strings.Count(dialog, "\n") + 3
+
+	savedH := m.Left.Height
+	m.Left.Height -= dialogH
+	m.Right.Height -= dialogH
+	if m.Left.Height < 3 {
+		m.Left.Height = 3
+		m.Right.Height = 3
+	}
+	left := m.renderPane(m.Left, m.Focus == focusLeft)
+	right := m.renderPane(m.Right, m.Focus == focusRight)
+	m.Left.Height = savedH
+	m.Right.Height = savedH
+
+	top := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	sep := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Render(strings.Repeat("─", m.Width))
+	console := m.renderConsole()
+	bindings := m.renderBindings()
+
+	body := lipgloss.JoinVertical(lipgloss.Left, topBar, top, dialog, sep, console, bindings)
+	return body
+}
+
+func (m *Model) renderWithMkdir(topBar string) string {
+	cursor := " "
+	if m.cursorOn {
+		cursor = "█"
+	}
+	current := string(m.mkdirInput) + cursor
+	content := fmt.Sprintf("\nNew Directory in:\n  %s\n\nname:\n  %s\n\nEnter=create  ESC=cancel\n", m.mkdirDir, current)
 	dialog := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
@@ -608,7 +649,7 @@ func (m *Model) renderViewer() string {
 			line = fmt.Sprintf("%4d %s", i+1, line)
 		}
 		if lipgloss.Width(line) > m.Width-4 {
-			line = lipgloss.NewStyle().Width(m.Width - 7).Render(line) + "..."
+			line = lipgloss.NewStyle().Width(m.Width-7).Render(line) + "..."
 		}
 		visible = append(visible, line)
 	}

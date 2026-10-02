@@ -36,7 +36,7 @@ golangci-lintで検出した問題を潰してあります。
 ### Go
 
 ```bash
-go install github.com/ktam72/skittles/v2@v2.6.0
+go install github.com/ktam72/skittles/v2@v2.7.0
 ```
 
 #### アンインストール
@@ -162,6 +162,7 @@ Markdown（`.md`）は色付きでレンダリング、ソースコードは chr
 | `p` | 外部アプリでプレビュー |
 | `c` | 反対ペインへコピー |
 | `m` | 反対ペインへ移動 |
+| `M` | ディレクトリ作成（ダイアログで名前入力・Enterで作成） |
 | `d` | 削除（確認ダイアログ表示） |
 | `r` | ファイル名リネーム |
 | `R` | カレントディレクトリ再読込 |
